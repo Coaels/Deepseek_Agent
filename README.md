@@ -10,7 +10,7 @@
 本项目仅有**一人**配合ai完成代码开发，bug很多，目前处于**测试**阶段    
 
 ## 启动方法
-1.安装[Python](python.org)(目前需要python，后期**可能**会打包成exe)，点击**Download**下载最新稳定版  
+1.安装[Python](https://python.org)(目前需要python，后期**可能**会打包成exe)，点击**Download**下载最新稳定版  
 
 
 ## 2.克隆项目:  
@@ -61,7 +61,7 @@
   
 ## 密钥申请  
 
-  1.前往[Deepseek开放平台](platform.deepseek.com) 注册或登录您的帐号  
+  1.前往[Deepseek开放平台](https://platform.deepseek.com) 注册或登录您的帐号  
   
   2.在**ApiKeys**页面新建密钥并**复制**  
 
