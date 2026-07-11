@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Coain</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            padding: 12px 24px;
+            background: #fff;
+            border-bottom: 1px solid #e8e8ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .header .logo { font-size: 18px; font-weight: 600; }
+        .header .logo .highlight { color: #3964fe; }
+        .header-actions { display: flex; gap: 8px; }
+        .header-actions button {
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e6;
+            background: #fff;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .header-actions button:hover { background: #f0f0f2; }
+        .header-actions .btn-stop {
+            background: #ff3b30;
+            color: #fff;
+            border-color: #ff3b30;
+        }
+        .header-actions .btn-stop:hover { background: #e62e24; }
+        .header-actions .btn-stop:disabled {
+            background: #ccc;
+            border-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .main-layout {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .skill-sidebar {
+            width: 260px;
+            background: #1e1e1e;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s ease;
+            flex-shrink: 0;
+        }
+        .skill-sidebar.collapsed {
+            width: 44px;
+        }
+        .skill-sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            border-bottom: 1px solid #333;
+            min-height: 48px;
+        }
+        .skill-sidebar.collapsed .skill-sidebar-header {
+            justify-content: center;
+            padding: 12px 8px;
+        }
+        .skill-sidebar-title {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+        .skill-sidebar.collapsed .skill-sidebar-title {
+            opacity: 0;
+            width: 0;
+        }
+        .skill-toggle-btn {
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+        }
+        .skill-toggle-btn:hover {
+            background: #333;
+            color: #fff;
+        }
+        .skill-sidebar.collapsed .skill-toggle-btn {
+            transform: rotate(180deg);
+        }
+        .skill-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 14px;
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+        .skill-sidebar.collapsed .skill-content {
+            opacity: 0;
+            pointer-events: none;
+            padding: 0;
+        }
+        .skill-item {
+            margin: 8px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .skill-item input[type="checkbox"] {
+            margin-top: 2px;
+            accent-color: #3964fe;
+            cursor: pointer;
+        }
+        .skill-item label {
+            cursor: pointer;
+            flex: 1;
+            color: #fff;
+        }
+        .skill-name {
+            font-size: 13px;
+            display: block;
+            line-height: 1.3;
+        }
+        .skill-desc {
+            color: #888;
+            font-size: 11px;
+            display: block;
+            margin-top: 2px;
+            line-height: 1.3;
+        }
+        .skill-actions {
+            padding: 12px 14px;
+            border-top: 1px solid #333;
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+        .skill-sidebar.collapsed .skill-actions {
+            opacity: 0;
+            pointer-events: none;
+            padding: 0;
+            height: 0;
+        }
+        .skill-apply-btn {
+            width: 100%;
+            padding: 8px;
+            background: #3964fe;
+            border: none;
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        .skill-apply-btn:hover {
+            background: #2954e8;
+        }
+        .skill-refresh-btn {
+            width: 100%;
+            padding: 6px;
+            background: #333;
+            border: 1px solid #444;
+            color: #ccc;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+        .skill-refresh-btn:hover {
+            background: #444;
+            color: #fff;
+        }
+
+        .chat-area { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            background: #fff;
+            overflow: hidden;
+            min-width: 0;
+        }
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .message {
+            max-width: 85%;
+            padding: 10px 16px;
+            border-radius: 12px;
+            line-height: 1.7;
+            font-size: 14px;
+            animation: fadeIn 0.2s ease;
+            word-break: break-word;
+        }
+        .message.user { 
+            background: #3964fe; 
+            color: #fff;
+            align-self: flex-end; 
+        }
+        .message.assistant { 
+            background: #f5f5f7; 
+            border: 1px solid #ececf0; 
+            align-self: flex-start; 
+            max-width: 95%;
+            color: #1a1a1a;
+        }
+        .message.assistant h1, .message.assistant h2, .message.assistant h3 {
+            margin: 12px 0 8px;
+            color: #1a1a1a;
+        }
+        .message.assistant h1 { font-size: 18px; }
+        .message.assistant h2 { font-size: 16px; }
+        .message.assistant h3 { font-size: 15px; }
+        .message.assistant p { margin: 6px 0; }
+        .message.assistant ul, .message.assistant ol {
+            margin: 6px 0;
+            padding-left: 20px;
+        }
+        .message.assistant li { margin: 3px 0; }
+        .message.assistant code {
+            background: #e8e8ed;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+        }
+
+        .code-block-wrapper {
+            margin: 8px 0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .code-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #2d2d44;
+            padding: 6px 12px;
+            font-size: 12px;
+            color: #7ee787;
+            font-family: 'Consolas', monospace;
+        }
+        .code-block-header button {
+            background: #444;
+            border: none;
+            color: #ccc;
+            padding: 2px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .code-block-header button:hover {
+            background: #555;
+            color: #fff;
+        }
+        .code-block-content {
+            max-height: 600px;
+            overflow: auto;
+            transition: max-height 0.3s ease;
+        }
+        .code-block-content.collapsed {
+            max-height: 0;
+            overflow: hidden;
+        }
+        .message.assistant pre {
+            background: #1a1a2e;
+            color: #e0e0e0;
+            padding: 12px 16px;
+            margin: 0;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
+            overflow-x: auto;
+        }
+        .message.assistant pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        .message.assistant blockquote {
+            border-left: 3px solid #3964fe;
+            padding-left: 12px;
+            margin: 8px 0;
+            color: #555;
+        }
+        .message.assistant table {
+            border-collapse: collapse;
+            margin: 8px 0;
+            width: 100%;
+        }
+        .message.assistant th, .message.assistant td {
+            border: 1px solid #e0e0e6;
+            padding: 6px 10px;
+            text-align: left;
+        }
+        .message.assistant th {
+            background: #f0f0f2;
+        }
+
+        .cmd-block {
+            background: #1a1a2e;
+            border-radius: 8px;
+            margin: 8px 0;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            border: 1px solid #2d2d44;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        .cmd-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #2d2d44;
+            padding: 8px 14px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .cmd-block-header:hover {
+            background: #363656;
+        }
+        .cmd-block-header .cmd-title {
+            color: #7ee787;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .cmd-block-header .cmd-toggle {
+            color: #888;
+            font-size: 11px;
+            transition: transform 0.2s;
+        }
+        .cmd-block-header.collapsed .cmd-toggle {
+            transform: rotate(-90deg);
+        }
+        .cmd-block-body {
+            padding: 12px 16px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+            max-height: 2000px;
+            overflow: auto;
+        }
+        .cmd-block-body.collapsed {
+            max-height: 0;
+            padding: 0 16px;
+            overflow: hidden;
+        }
+        .cmd-block .cmd-line {
+            color: #79c0ff;
+            padding: 4px 0;
+            border-bottom: 1px solid #2d2d44;
+            margin-bottom: 8px;
+        }
+        .cmd-block .cmd-output {
+            color: #c9d1d9;
+            line-height: 1.6;
+        }
+
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(4px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        .cursor-blink {
+            display: inline-block;
+            width: 2px;
+            height: 1.1em;
+            background: #3964fe;
+            animation: blink 0.9s step-end infinite;
+            vertical-align: text-bottom;
+            margin-left: 2px;
+        }
+        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+        .input-area {
+            padding: 10px 24px 14px;
+            border-top: 1px solid #e8e8ed;
+            background: #fff;
+            flex-shrink: 0;
+        }
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            background: #f5f5f7;
+            border-radius: 14px;
+            padding: 6px 8px 6px 16px;
+            border: 1px solid #e8e8ed;
+            align-items: flex-end;
+        }
+        .input-wrapper:focus-within { border-color: #3964fe; }
+        .input-wrapper textarea {
+            flex: 1;
+            border: none;
+            outline: none;
+            background: transparent;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            padding: 6px 0;
+            min-height: 24px;
+            max-height: 150px;
+            line-height: 1.6;
+        }
+        .input-wrapper .btn-send {
+            background: #3964fe;
+            border: none;
+            color: #fff;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .input-wrapper .btn-send:hover { background: #2954e8; }
+        .input-wrapper .btn-send:disabled { background: #ccc; cursor: not-allowed; }
+        .bottom-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #8e8e93;
+        }
+        .bottom-bar .status.loading { color: #3964fe; }
+        .bottom-bar .status.stopped { color: #ff3b30; }
+        .bottom-bar .status.error { color: #ff3b30; }
+        .welcome-msg {
+            text-align: center;
+            color: #8e8e93;
+            margin: auto;
+            font-size: 14px;
+            padding: 40px;
+        }
+        .retry-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 14px;
+            background: #3964fe;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .retry-btn:hover { background: #2954e8; }
+    </style>
+<base target="_blank">
+</head>
+<body>
+
+    <div class="header">
+        <div><span class="logo">Coain</span></div>
+        <div class="header-actions">
+            <button onclick="clearChat()"> 清空</button>
+            <button class="btn-stop" id="stopBtn" onclick="stopAI()" disabled>⏹️ 停止</button>
+        </div>
+    </div>
+
+    <div class="main-layout">
+        <div class="skill-sidebar" id="skillSidebar">
+            <div class="skill-sidebar-header">
+                <span class="skill-sidebar-title">Skill</span>
+                <button class="skill-toggle-btn" onclick="toggleSkillSidebar()" title="折叠/展开">◀</button>
+            </div>
+            <div class="skill-content" id="skillContent">
+                <div id="skill-list">加载中...</div>
+            </div>
+            <div class="skill-actions">
+                <button class="skill-refresh-btn" onclick="loadSkills()">刷新</button>
+                <button class="skill-apply-btn" onclick="saveSkills()">应用</button>
+            </div>
+        </div>
+
+        <div class="chat-area">
+            <div class="messages" id="messages">
+                <div class="welcome-msg"></div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <textarea id="userInput" rows="1" placeholder="输入指令..."></textarea>
+                    <button class="btn-send" id="sendBtn">➤</button>
+                </div>
+                <div class="bottom-bar">
+                    <span><kbd style="background:#f0f0f2;padding:1px 6px;border-radius:4px;border:1px solid #e0e0e6;">Enter</kbd> 发送</span>
+                    <span class="status" id="status">就绪</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isReplying = false;
+        let currentMsgDiv = null;
+        let currentContent = '';
+        let sessionId = 'default';
+        let abortController = null;
+        let lastUserMessage = '';
+
+        const container = document.getElementById('messages');
+        const input = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const status = document.getElementById('status');
+        const skillSidebar = document.getElementById('skillSidebar');
+
+        sendBtn.addEventListener('click', function() { sendMessage(); });
+
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        input.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+        });
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function addMessage(role, content) {
+            const div = document.createElement('div');
+            div.className = 'message ' + role;
+            div.innerHTML = content;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            return div;
+        }
+
+        function addCodeFolding(html) {
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+
+            const pres = temp.querySelectorAll('pre');
+            pres.forEach(pre => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'code-block-wrapper';
+
+                const header = document.createElement('div');
+                header.className = 'code-block-header';
+
+                const code = pre.querySelector('code');
+                let lang = '';
+                if (code) {
+                    const classes = code.className.split(' ');
+                    for (const c of classes) {
+                        if (c.startsWith('language-')) {
+                            lang = c.replace('language-', '');
+                            break;
+                        }
+                    }
+                }
+
+                header.innerHTML = `<span>${lang || 'code'}</span><button onclick="toggleCode(this)">折叠</button>`;
+
+                const content = document.createElement('div');
+                content.className = 'code-block-content';
+
+                content.appendChild(pre.cloneNode(true));
+
+                wrapper.appendChild(header);
+                wrapper.appendChild(content);
+                pre.parentNode.replaceChild(wrapper, pre);
+            });
+
+            return temp.innerHTML;
+        }
+
+        function toggleCode(btn) {
+            const content = btn.closest('.code-block-wrapper').querySelector('.code-block-content');
+            const isCollapsed = content.classList.toggle('collapsed');
+            btn.textContent = isCollapsed ? '展开' : '折叠';
+        }
+
+        function parseContent(text) {
+            const parts = [];
+            let currentPos = 0;
+
+            const cmdRegex = /═{20,}\n([\s\S]*?)\n═{20,}/g;
+            let match;
+
+            while ((match = cmdRegex.exec(text)) !== null) {
+                if (match.index > currentPos) {
+                    const textPart = text.substring(currentPos, match.index);
+                    parts.push({type: 'text', content: textPart});
+                }
+                parts.push({type: 'cmd', content: match[1]});
+                currentPos = match.index + match[0].length;
+            }
+
+            if (currentPos < text.length) {
+                parts.push({type: 'text', content: text.substring(currentPos)});
+            }
+
+            if (parts.length === 0) {
+                parts.push({type: 'text', content: text});
+            }
+
+            let html = '';
+            for (const part of parts) {
+                if (part.type === 'cmd') {
+                    html += renderCommandBlock(part.content);
+                } else {
+                    try {
+                        html += marked.parse(part.content);
+                    } catch (e) {
+                        html += escapeHtml(part.content).replace(/\n/g, '<br>');
+                    }
+                }
+            }
+
+            return html;
+        }
+
+        function renderCommandBlock(content) {
+            const lines = content.split('\n');
+            let toolName = '';
+            let cmd = '';
+            let filePath = '';
+            let outputLines = [];
+            let inOutput = false;
+
+            for (let line of lines) {
+                if (line.startsWith('🔧 工具:')) {
+                    toolName = line.replace('🔧 工具:', '').trim();
+                } else if (line.startsWith('▶ 命令:')) {
+                    cmd = line.replace('▶ 命令:', '').trim();
+                    inOutput = false;
+                } else if (line.startsWith('📄 文件:') || line.startsWith('📝 文件:') || line.startsWith('📂 目录:')) {
+                    filePath = line.split(':').slice(1).join(':').trim();
+                    inOutput = false;
+                } else if (line.match(/^─{10,}$/)) {
+                    inOutput = true;
+                } else if (inOutput) {
+                    outputLines.push(line);
+                }
+            }
+
+            let html = '<div class="cmd-block">';
+            html += '<div class="cmd-block-header collapsed" onclick="toggleCmdBlock(this)">';
+            html += '<span class="cmd-title">🔧 ' + escapeHtml(toolName) + '</span>';
+            html += '<span class="cmd-toggle">▶</span>';
+            html += '</div>';
+            html += '<div class="cmd-block-body collapsed">';
+            if (cmd) {
+                html += '<div class="cmd-line">▶ ' + escapeHtml(cmd) + '</div>';
+            } else if (filePath) {
+                html += '<div class="cmd-line">📍 ' + escapeHtml(filePath) + '</div>';
+            }
+            if (outputLines.length > 0) {
+                html += '<div class="cmd-output">' + escapeHtml(outputLines.join('\n')).replace(/\n/g, '<br>') + '</div>';
+            }
+            html += '</div></div>';
+            return html;
+        }
+
+        function toggleCmdBlock(header) {
+            header.classList.toggle('collapsed');
+            const body = header.nextElementSibling;
+            body.classList.toggle('collapsed');
+            const toggle = header.querySelector('.cmd-toggle');
+            toggle.textContent = header.classList.contains('collapsed') ? '▶' : '▼';
+        }
+
+        function renderMessage(text) {
+            let html = parseContent(text);
+            html = addCodeFolding(html);
+            return html;
+        }
+
+        function toggleSkillSidebar() {
+            skillSidebar.classList.toggle('collapsed');
+        }
+
+        async function sendMessage(isRetry) {
+            if (isReplying && !isRetry) return;
+
+            const text = isRetry ? lastUserMessage : input.value.trim();
+            if (!text) return;
+
+            if (!isRetry) lastUserMessage = text;
+            if (!isRetry) {
+                input.value = '';
+                input.style.height = 'auto';
+            }
+
+            const welcome = container.querySelector('.welcome-msg');
+            if (welcome) welcome.remove();
+            if (!isRetry) addMessage('user', escapeHtml(text));
+
+            isReplying = true;
+            sendBtn.disabled = true;
+            stopBtn.disabled = false;
+            status.textContent = '⏳ AI 工作中...';
+            status.className = 'status loading';
+
+            currentMsgDiv = document.createElement('div');
+            currentMsgDiv.className = 'message assistant';
+            currentMsgDiv.innerHTML = '<span class="cursor-blink"></span>';
+            container.appendChild(currentMsgDiv);
+            container.scrollTop = container.scrollHeight;
+            currentContent = '';
+
+            abortController = new AbortController();
+
+            try {
+                const response = await fetch('/api/chat/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text, session_id: sessionId }),
+                    signal: abortController.signal
+                });
+
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        try {
+                            const data = JSON.parse(line);
+                            if (data.type === 'heartbeat') continue;
+
+                            if (data.type === 'text') {
+                                currentContent += data.content;
+                                currentMsgDiv.innerHTML = renderMessage(currentContent) + '<span class="cursor-blink"></span>';
+                                container.scrollTop = container.scrollHeight;
+                            } else if (data.type === 'done') {
+                                finishMessage(true);
+                                return;
+                            }
+                        } catch (e) {
+                            console.error('解析行失败:', line, e);
+                        }
+                    }
+                }
+
+                if (isReplying) finishMessage(true);
+
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    currentMsgDiv.innerHTML += '<br><br><span style="color:#ff3b30;">⏹️ 已停止</span>';
+                    finishMessage(false);
+                } else {
+                    currentMsgDiv.innerHTML = '❌ 错误: ' + escapeHtml(error.message) + 
+                        '<br><button class="retry-btn" onclick="retryMessage()">🔄 重试</button>';
+                    finishMessage(false, true);
+                }
+            }
+        }
+
+        function retryMessage() {
+            const retryBtn = currentMsgDiv.querySelector('.retry-btn');
+            if (retryBtn) retryBtn.remove();
+            sendMessage(true);
+        }
+
+        function finishMessage(success, isError) {
+            const cursor = currentMsgDiv.querySelector('.cursor-blink');
+            if (cursor) cursor.remove();
+
+            currentMsgDiv.innerHTML = renderMessage(currentContent);
+
+            if (isError) {
+                status.textContent = '❌ 失败';
+                status.className = 'status error';
+            } else {
+                status.textContent = success ? '✅ 完成' : '⏹️ 已停止';
+                status.className = success ? 'status' : 'status stopped';
+            }
+
+            isReplying = false;
+            sendBtn.disabled = false;
+            stopBtn.disabled = true;
+            abortController = null;
+            loadFiles();
+        }
+
+        async function stopAI() {
+            if (abortController) abortController.abort();
+            try {
+                await fetch('/api/stop', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+            } catch (e) {}
+            status.textContent = '⏹️ 已停止';
+            status.className = 'status stopped';
+        }
+
+        async function clearChat() {
+            try {
+                await fetch('/api/clear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+                container.innerHTML = '<div class="welcome-msg"></div>';
+                lastUserMessage = '';
+            } catch (e) {}
+        }
+
+        async function loadFiles() {
+            try {
+                const response = await fetch('/api/files');
+                const data = await response.json();
+            } catch (e) {}
+        }
+
+        async function loadSkills() {
+            try {
+                const resp = await fetch('/api/skills');
+                const data = await resp.json();
+
+                const sessionResp = await fetch('/api/skills/session?session_id=' + sessionId);
+                const sessionData = await sessionResp.json();
+                const enabled = sessionData.enabled_skills || [];
+
+                const list = document.getElementById('skill-list');
+                if (!data.skills || data.skills.length === 0) {
+                    list.innerHTML = '<span style="color: #666;">暂无 Skills</span>';
+                    return;
+                }
+
+                list.innerHTML = data.skills.map(s => `
+                    <div class="skill-item">
+                        <input type="checkbox" id="skill-${s.name}" name="skill" value="${s.name}" ${enabled.includes(s.name) ? 'checked' : ''}>
+                        <label for="skill-${s.name}">
+                            <span class="skill-name">${s.display_name}</span>
+                            <span class="skill-desc">${s.description}</span>
+                        </label>
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('skill-list').innerHTML = '<span style="color: #666;">加载失败</span>';
+            }
+        }
+
+        async function saveSkills() {
+            const checked = Array.from(document.querySelectorAll('input[name="skill"]:checked')).map(cb => cb.value);
+
+            try {
+                const resp = await fetch('/api/skills/session', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        enabled_skills: checked
+                    })
+                });
+                const data = await resp.json();
+                alert('Skills 已更新: ' + (data.enabled_skills.join(', ') || '无'));
+            } catch (e) {
+                alert('保存失败: ' + e);
+            }
+        }
+
+        loadSkills();
+        loadFiles();
+    </script>
+
+</body>
+</html>
