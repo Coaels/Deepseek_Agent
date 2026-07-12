@@ -11,7 +11,10 @@
 
 ------  
 # 更新日志  
-## 已更新skill:图片生成，无需配置api，直接使用即可。感谢 [pollinations.ai](https://pollinations.ai)的免费生成!
+## 已更新skill:  
+图片生成，无需配置api，直接使用即可。感谢 [pollinations.ai](https://pollinations.ai)的免费生成!  
+
+------
 
 ## 启动方法
 安装[Python](https://python.org)(目前需要python，后期**可能**会打包成exe)，点击**Download**下载最新稳定版  
