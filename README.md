@@ -9,8 +9,12 @@
 
 本项目仅有**一人**配合ai完成代码开发，bug很多，目前处于**测试**阶段    
 
+------  
+# 更新日志  
+## 已更新skill:图片生成，无需配置api，直接使用即可。感谢 [pollinations.ai](https://pollinations.ai)的免费生成!
+
 ## 启动方法
-1.安装[Python](https://python.org)(目前需要python，后期**可能**会打包成exe)，点击**Download**下载最新稳定版  
+安装[Python](https://python.org)(目前需要python，后期**可能**会打包成exe)，点击**Download**下载最新稳定版  
 
 
 ## 2.克隆项目:  
