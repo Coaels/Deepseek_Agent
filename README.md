@@ -33,7 +33,7 @@
   3.编辑**DEEPSEEK_API_KEY**处，将您的**ApiKey**填写在**单引号**内，例如:**DEEPSEEK_API_KEY = 'sk-a1b2c3d4e5...'**。  
   ### 注意:如果您没有apiKey，请先去申请一个密钥!具体方法请见下方密钥申请 
 
-  4.按下键盘上的win+r，输入**CMD**，在弹出的黑色窗口输入```python -m pip install flask flask-cors```并等待安装完成  
+  4.按下键盘上的win+r，输入**CMD**，在弹出的黑色窗口输入```python -m pip install flask flask-cors requests```并等待安装完成  
 
   5.运行项目,双击**run.bat**后，如果弹出UAC安全窗口，请**确认**  
 
