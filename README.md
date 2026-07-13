@@ -11,6 +11,8 @@
 
 ------  
 # 更新日志  
+## Alpha0.2.0:  
+修复上下文问题，解决第二次问ai，ai还会回答之前的问题的毛病  
 ## 已更新skill:  
 图片生成，无需配置api，直接使用即可。感谢 [pollinations.ai](https://pollinations.ai)的免费生成!  
 
