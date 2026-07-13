@@ -1,6 +1,6 @@
 name: 问题反馈 / Bug Report
 description: 提交问题反馈，请严格按照模板填写
-title: "[问题]: "
+title: " "
 labels: ["bug", "待处理"]
 assignees: []
 body:
