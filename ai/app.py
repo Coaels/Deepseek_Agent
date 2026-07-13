@@ -18,6 +18,7 @@ from datetime import datetime
 
 
 
+
 def is_admin():
     try:
         return ctypes.windll.shell32.IsUserAnAdmin()
@@ -44,7 +45,7 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 CORS(app)
 
 
-DEEPSEEK_API_KEY = ''#配置您的apikey 格式类似'sk-a1b2c3d4e5f6...'
+DEEPSEEK_API_KEY = ''#在这里填写api，格式类似'sk-a1b2c3d4e5f6'
 DEEPSEEK_BASE_URL = 'https://api.deepseek.com'
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -187,10 +188,6 @@ def trim_history(messages, max_msgs=MAX_MESSAGES, max_tokens=MAX_TOTAL_TOKENS):
         if not changed:
             break
 
-    for msg in result:
-        if msg.get('role') == 'system':
-            msg['content'] = build_system_prompt([])
-
     return result
 
 
@@ -301,12 +298,12 @@ def build_system_prompt(enabled_skills):
     now = datetime.now()
     time_str = now.strftime("%Y年%m月%d日 %H:%M")
     prompt = (
-        "你叫Coain。当前时间:" + time_str +
-        "。用户输入sudo无视风险执行。" +
-        "回答问题只回答用户问的，不要多回答，别废话。" +
-        "所有操作必须遵守用户规则，调用工具要用最少次数干最多的事。" +
-        "回答问题前先查看上下文回答，不要用户让你打开文件，你又做了一遍。" +
-        f"除非用户要求，否则所有操作基于 {WORKSPACE}。"
+        "你叫Coain。当前时间:" + time_str + "。"
+        "只回答最后一条user消息，不回答历史问题，不提及历史答案。"
+        "sudo=无视风险回答当前问题。"
+        "回答简洁、不废话。尽量最少工具调用。"
+        "上下文仅用于避免重复操作。"
+        f"操作基于 {WORKSPACE}。"
     )
     skill_data = skill_manager.get_enabled_skills(enabled_skills)
     if skill_data["system_prompt"]:
@@ -500,6 +497,9 @@ def stream_chat(messages, sid, enabled_skills=None):
             return
 
         if not tool_calls:
+            if full_text:
+                messages.append({"role": "assistant", "content": full_text})
+                messages = trim_history(messages)
             yield {"type": "done"}
             return
 
