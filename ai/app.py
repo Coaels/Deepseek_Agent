@@ -18,7 +18,6 @@ from datetime import datetime
 
 
 
-
 def is_admin():
     try:
         return ctypes.windll.shell32.IsUserAnAdmin()
@@ -45,7 +44,7 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 CORS(app)
 
 
-DEEPSEEK_API_KEY = ''#在这里填写api，格式类似'sk-a1b2c3d4e5f6'
+DEEPSEEK_API_KEY = ''#配置apikey，格式类似'sk-a1b2c3...'
 DEEPSEEK_BASE_URL = 'https://api.deepseek.com'
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -55,9 +54,13 @@ SKILLS_DIR = os.path.join(SCRIPT_DIR, 'skills')
 
 os.makedirs(SKILLS_DIR, exist_ok=True)
 
+LEARN_DIR = os.path.join(SCRIPT_DIR, 'Learns')
+os.makedirs(LEARN_DIR, exist_ok=True)
+
 conversation_history = {}
 session_stop = {}
 session_skills = {}
+session_knowledge = {}
 
 MAX_MESSAGES = 100
 MAX_TOTAL_TOKENS = 100000
@@ -293,8 +296,57 @@ def get_session_skills(sid):
         session_skills[sid] = skill_manager.get_default_skills().copy()
     return session_skills[sid]
 
+def get_session_knowledge(sid):
+    if sid not in session_knowledge:
+        session_knowledge[sid] = []
+    return session_knowledge[sid]
 
-def build_system_prompt(enabled_skills):
+
+def load_knowledge_file(filename):
+    filepath = os.path.join(LEARN_DIR, filename)
+    if not os.path.isfile(filepath):
+        return None
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data
+    except Exception:
+        return None
+
+
+def list_knowledge_files():
+    if not os.path.exists(LEARN_DIR):
+        return []
+    files = []
+    for n in sorted(os.listdir(LEARN_DIR)):
+        p = os.path.join(LEARN_DIR, n)
+        if os.path.isfile(p):
+            name = os.path.splitext(n)[0]
+            files.append({'name': name, 'filename': n})
+    return files
+
+
+def build_knowledge_prompt(enabled_knowledge):
+    if not enabled_knowledge:
+        return ''
+    parts = []
+    for kname in enabled_knowledge:
+        filepath = os.path.join(LEARN_DIR, kname + '.json')
+        if not os.path.isfile(filepath):
+            continue
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            content = json.dumps(data, ensure_ascii=False)
+            parts.append('[' + kname + ']\n' + content)
+        except Exception:
+            continue
+    if not parts:
+        return ''
+    return '\n\n【知识库内容】\n' + '\n\n'.join(parts)
+
+
+def build_system_prompt(enabled_skills, enabled_knowledge=None):
     now = datetime.now()
     time_str = now.strftime("%Y年%m月%d日 %H:%M")
     prompt = (
@@ -308,6 +360,9 @@ def build_system_prompt(enabled_skills):
     skill_data = skill_manager.get_enabled_skills(enabled_skills)
     if skill_data["system_prompt"]:
         prompt += "\n\n【已启用的 Skill 能力】\n" + skill_data["system_prompt"]
+    knowledge_prompt = build_knowledge_prompt(enabled_knowledge or [])
+    if knowledge_prompt:
+        prompt += "\n\n" + knowledge_prompt
     return prompt
 
 BASE_TOOLS = []
@@ -690,6 +745,25 @@ def set_session_skills_api():
     session_skills[sid] = enabled
     return jsonify({"status": "ok", "session_id": sid, "enabled_skills": enabled})
 
+@app.route('/api/knowledge', methods=['GET'])
+def get_knowledge():
+    return jsonify({"knowledge": list_knowledge_files()})
+
+@app.route('/api/knowledge/session', methods=['GET'])
+def get_session_knowledge_api():
+    sid = request.args.get('session_id', 'default')
+    return jsonify({"session_id": sid, "enabled_knowledge": get_session_knowledge(sid)})
+
+@app.route('/api/knowledge/session', methods=['POST'])
+def set_session_knowledge_api():
+    data = request.json
+    sid = data.get('session_id', 'default')
+    enabled = data.get("enabled_knowledge", [])
+    valid_names = [f['name'] for f in list_knowledge_files()]
+    enabled = [k for k in enabled if k in valid_names]
+    session_knowledge[sid] = enabled
+    return jsonify({"status": "ok", "session_id": sid, "enabled_knowledge": enabled})
+
 @app.route('/api/chat/stream', methods=['POST'])
 def chat_stream():
     data = request.json
@@ -701,12 +775,13 @@ def chat_stream():
 
     session_stop[sid] = False
     enabled_skills = get_session_skills(sid)
+    enabled_knowledge = get_session_knowledge(sid)
 
     def generate():
         try:
             history = get_history(sid)
 
-            system_prompt = build_system_prompt(enabled_skills)
+            system_prompt = build_system_prompt(enabled_skills, enabled_knowledge)
             has_system = False
             for msg in history:
                 if msg.get('role') == 'system':
@@ -753,6 +828,8 @@ def clear():
         conversation_history[sid] = []
     if sid in session_stop:
         session_stop[sid] = False
+    if sid in session_knowledge:
+        session_knowledge[sid] = []
     return jsonify({"status": "ok"})
 
 if __name__ == '__main__':
@@ -769,6 +846,7 @@ if __name__ == '__main__':
         log("管理员权限: " + ("是" if is_admin() else "否"))
         log("工作目录: " + WORKSPACE)
         log("Skills 目录: " + SKILLS_DIR)
+        log("知识库目录: " + LEARN_DIR)
 
         log("已加载 Skills: " + str(list(skill_manager.skills.keys())))
 
@@ -780,6 +858,7 @@ if __name__ == '__main__':
         print(" 管理员权限: " + ("是" if is_admin() else "否"))
         print(" 工作目录: " + WORKSPACE)
         print(" Skills 目录: " + SKILLS_DIR)
+        print(" 知识库目录: " + LEARN_DIR)
         print(" 已加载 Skills: " + str(list(skill_manager.skills.keys())))
         print(" 上下文限制: " + str(MAX_MESSAGES) + " 条消息 / " + str(MAX_TOTAL_TOKENS) + " tokens")
         print("=" * 50)
