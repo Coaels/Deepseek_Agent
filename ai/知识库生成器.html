@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图形化 · 极省Token知识库生成器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #f4f7fc;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            color: #1e2a3a;
+        }
+        .app-container {
+            max-width: 1440px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 2rem;
+            box-shadow: 0 20px 50px rgba(0, 20, 40, 0.10), 0 0 0 1px rgba(0,0,0,0.02);
+            padding: 2rem 2rem 2rem 2rem;
+            transition: 0.2s;
+        }
+        h1 {
+            font-weight: 600;
+            font-size: 1.8rem;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 0.4rem;
+            color: #0b1a2b;
+        }
+        h1 small {
+            font-size: 0.85rem;
+            font-weight: 400;
+            background: #eef3fa;
+            padding: 0.2rem 1rem;
+            border-radius: 40px;
+            color: #2b4a6f;
+            margin-left: 0.5rem;
+        }
+        .sub-head {
+            color: #3d5a7a;
+            margin-bottom: 1.8rem;
+            font-size: 0.95rem;
+            border-left: 4px solid #3b82f6;
+            padding-left: 1rem;
+            background: #f0f5fe;
+            border-radius: 0 12px 12px 0;
+            line-height: 1.5;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sub-head code {
+            background: #dce5f2;
+            padding: 0.15rem 0.8rem;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            color: #1f3b61;
+        }
+        .flex-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+        /* 左侧图形化面板 */
+        .left-panel {
+            flex: 1.2;
+            min-width: 380px;
+            background: #f9fbfe;
+            border-radius: 1.8rem;
+            padding: 1.5rem 1.5rem 1.8rem;
+            border: 1px solid #e2e9f2;
+        }
+        .panel-title {
+            font-weight: 500;
+            color: #1f3a5e;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 1.1rem;
+        }
+        .panel-title span {
+            background: #dbe4f0;
+            padding: 0 0.8rem;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 400;
+            color: #2c4b70;
+        }
+        .entity-group {
+            background: white;
+            border-radius: 1.4rem;
+            padding: 1.2rem 1.2rem 0.8rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e6edf6;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.01);
+        }
+        .entity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+        .entity-header label {
+            font-weight: 500;
+            color: #1f3a5e;
+            font-size: 0.95rem;
+        }
+        .entity-header .badge-key {
+            background: #e3ebf5;
+            padding: 0.2rem 0.9rem;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            color: #1c3b61;
+        }
+        .field-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem 0.8rem;
+            margin-bottom: 0.8rem;
+            background: #f6faff;
+            padding: 0.4rem 0.8rem 0.4rem 0.8rem;
+            border-radius: 50px;
+            border: 1px solid #eaf0f8;
+        }
+        .field-row .key-input {
+            border: none;
+            background: transparent;
+            padding: 0.4rem 0.2rem;
+            font-weight: 500;
+            color: #0e2844;
+            width: 75px;
+            font-size: 0.85rem;
+            outline: none;
+            border-bottom: 2px dotted #b6cbe2;
+        }
+        .field-row .key-input:focus {
+            border-bottom-color: #3b82f6;
+        }
+        .field-row .value-input {
+            flex: 1;
+            min-width: 120px;
+            border: 1px solid #d7e2ef;
+            border-radius: 40px;
+            padding: 0.4rem 1rem;
+            background: white;
+            font-size: 0.85rem;
+            outline: none;
+            transition: 0.1s;
+        }
+        .field-row .value-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+        .field-row .btn-remove {
+            background: transparent;
+            border: none;
+            color: #b0c7df;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0 0.2rem;
+            transition: 0.1s;
+            line-height: 1;
+        }
+        .field-row .btn-remove:hover {
+            color: #d14c5a;
+        }
+        .add-field-btn {
+            background: #edf4fd;
+            border: 1px dashed #b4cce6;
+            border-radius: 40px;
+            padding: 0.3rem 1.2rem;
+            font-size: 0.8rem;
+            color: #2b5590;
+            cursor: pointer;
+            transition: 0.1s;
+            margin-top: 0.2rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .add-field-btn:hover {
+            background: #e0ebfc;
+            border-color: #6e96d4;
+        }
+        .entity-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin: 0.8rem 0 0.2rem;
+        }
+        .btn {
+            background: white;
+            border: 1px solid #d0dcec;
+            padding: 0.4rem 1.2rem;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.8rem;
+            color: #1f3a5e;
+            cursor: pointer;
+            transition: 0.1s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-primary {
+            background: #1f5fcf;
+            border-color: #1f5fcf;
+            color: white;
+            box-shadow: 0 2px 8px rgba(31, 95, 207, 0.15);
+        }
+        .btn-primary:hover {
+            background: #2a6ee6;
+            border-color: #2a6ee6;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #c8d7ea;
+        }
+        .btn-outline:hover {
+            background: #eaf1fc;
+        }
+        .btn-danger {
+            color: #b34a5a;
+            border-color: #f0d2d7;
+        }
+        .btn-danger:hover {
+            background: #fce8eb;
+            border-color: #dbaeb8;
+        }
+        .btn-success {
+            background: #1f9a6e;
+            border-color: #1f9a6e;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #27b07f;
+            border-color: #27b07f;
+        }
+        /* 右侧JSON面板 */
+        .right-panel {
+            flex: 1;
+            min-width: 340px;
+            background: #fafcff;
+            border-radius: 1.8rem;
+            border: 1px solid #e2e9f2;
+            padding: 1.5rem 1.5rem 1.8rem;
+            display: flex;
+            flex-direction: column;
+        }
+        .json-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+        }
+        .json-header .title {
+            font-weight: 500;
+            color: #1f3a5e;
+        }
+        .json-output {
+            background: #ffffff;
+            border-radius: 1.4rem;
+            padding: 1rem 1.2rem;
+            border: 1px solid #e5edf6;
+            min-height: 320px;
+            max-height: 500px;
+            overflow: auto;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.8rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: #142b44;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.01);
+            flex: 1;
+        }
+        .json-output .empty-hint {
+            color: #94acc9;
+            font-style: italic;
+        }
+        .download-area {
+            display: flex;
+            gap: 0.6rem;
+            margin-top: 1.2rem;
+            flex-wrap: wrap;
+        }
+        .token-badge {
+            background: #e7eef9;
+            border-radius: 40px;
+            padding: 0.3rem 1.2rem;
+            font-size: 0.8rem;
+            color: #1d3f67;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .footer-tip {
+            margin-top: 1rem;
+            font-size: 0.75rem;
+            color: #6b89af;
+            border-top: 1px solid #e3ebf5;
+            padding-top: 1rem;
+            text-align: right;
+        }
+        /* 自适应 */
+        @media (max-width: 760px) {
+            .left-panel { min-width: 100%; }
+            .right-panel { min-width: 100%; }
+            .field-row { flex-wrap: wrap; }
+        }
+        /* 滚动条 */
+        .json-output::-webkit-scrollbar {
+            width: 5px;
+            background: #eef3fa;
+            border-radius: 20px;
+        }
+        .json-output::-webkit-scrollbar-thumb {
+            background: #bfd2e9;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <h1>
+        🧩 图形化知识库 · 生成器
+        <small>极省Token · 短键编码</small>
+    </h1>
+    <div class="sub-head">
+        <span>左侧添加自定义键值对 · 自动压缩为短键格式 (type→t, chinese→c, name→id)</span>
+        <code>⚡ 一键下载 JSON</code>
+    </div>
+
+    <div class="flex-layout">
+        <!-- 左侧图形化面板 -->
+        <div class="left-panel" id="leftPanel">
+            <div class="panel-title">
+                📂 分类 / 实体
+                <span>可添加多个</span>
+            </div>
+            <!-- 动态实体容器 -->
+            <div id="entityContainer">
+                <!-- 由 JS 动态渲染 -->
+            </div>
+            <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.2rem;">
+                <button class="btn btn-primary" id="addEntityBtn">➕ 添加分类</button>
+                <button class="btn btn-outline" id="resetExampleBtn">🔄 重置示例</button>
+                <button class="btn btn-outline" id="clearAllBtn">🗑️ 清空全部</button>
+            </div>
+            <div style="margin-top: 0.8rem; background: #edf4fd; border-radius: 60px; padding: 0.2rem 1rem; display: inline-block; font-size:0.75rem; color:#2b4c78;">
+                ⚡ 短键映射: type→t · chinese→c · name→id
+            </div>
+        </div>
+
+        <!-- 右侧 JSON 预览 + 下载 -->
+        <div class="right-panel">
+            <div class="json-header">
+                <span class="title">📄 生成 JSON (压缩格式)</span>
+                <span class="token-badge" id="tokenDisplay">Token: 0</span>
+            </div>
+            <div class="json-output" id="jsonOutput">
+                <span class="empty-hint">等待数据…</span>
+            </div>
+            <div class="download-area">
+                <button class="btn btn-success" id="downloadBtn">⬇ 下载 JSON</button>
+                <button class="btn btn-outline" id="copyBtn">📋 复制</button>
+                <button class="btn btn-outline" id="formatViewBtn">🔍 格式化预览</button>
+            </div>
+            <div class="footer-tip">
+                自动应用短键压缩 · 去除冗余空格
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    (function() {
+        // ----- 状态 -----
+        let entities = [];  // 每个实体: { name: '游戏', fields: [ { key: 'id', value: 'minecraft' }, ... ] }
+
+        // DOM 引用
+        const entityContainer = document.getElementById('entityContainer');
+        const jsonOutput = document.getElementById('jsonOutput');
+        const tokenDisplay = document.getElementById('tokenDisplay');
+
+        // ----- 辅助: token 估算 (cl100k 近似) -----
+        function estimateTokens(text) {
+            if (!text) return 0;
+            const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+            const otherChars = text.length - chineseChars;
+            const tokens = (chineseChars / 1.8) + (otherChars / 4);
+            return Math.ceil(tokens);
+        }
+
+        // ----- 核心: 从 entities 生成 JSON (短键压缩) -----
+        function buildJSON(entitiesData) {
+            const result = {};
+            entitiesData.forEach(entity => {
+                const fields = entity.fields || [];
+                // 过滤掉空 key 或空 value (但保留id为空的? 允许)
+                const filtered = fields.filter(f => f.key.trim() !== '');
+                if (filtered.length === 0) {
+                    result[entity.name] = [];
+                    return;
+                }
+                // 将 fields 转换为对象，同时应用短键映射
+                const obj = {};
+                filtered.forEach(f => {
+                    let key = f.key.trim();
+                    // 短键映射
+                    if (key === 'type') key = 't';
+                    else if (key === 'chinese') key = 'c';
+                    else if (key === 'name') key = 'id';
+                    // 但如果用户已经用了短键，保留
+                    obj[key] = f.value;
+                });
+                result[entity.name] = [obj];  // 每个实体对应一个对象数组（符合原设计）
+            });
+            return result;
+        }
+
+        // 生成压缩 JSON 字符串
+        function getCompressedJSON() {
+            const data = buildJSON(entities);
+            return JSON.stringify(data);
+        }
+
+        // 生成格式化 JSON (用于预览)
+        function getPrettyJSON() {
+            const data = buildJSON(entities);
+            return JSON.stringify(data, null, 2);
+        }
+
+        // 更新所有UI: 重新渲染左侧 + 右侧JSON
+        function renderAll() {
+            renderEntities();
+            updateJSONPreview();
+        }
+
+        // 渲染实体 (左侧)
+        function renderEntities() {
+            if (entities.length === 0) {
+                entityContainer.innerHTML = `<div style="background:#f0f6fe; border-radius:1.8rem; padding:1.2rem; text-align:center; color:#5d7ea0; border:1px dashed #c4d6ec;">点击 “添加分类” 开始构建知识库</div>`;
+                return;
+            }
+            let html = '';
+            entities.forEach((entity, index) => {
+                const fields = entity.fields || [];
+                html += `<div class="entity-group" data-entity-index="${index}">
+                    <div class="entity-header">
+                        <label>📁 分类名称 <span class="badge-key">${entity.name}</span></label>
+                        <button class="btn btn-danger" style="padding:0.2rem 0.8rem; font-size:0.7rem;" data-remove-entity="${index}">✕ 移除</button>
+                    </div>
+                    <div style="margin-bottom:0.2rem;">`;
+                // 渲染字段
+                fields.forEach((field, fieldIdx) => {
+                    html += `<div class="field-row" data-field-index="${fieldIdx}">
+                        <input class="key-input" type="text" placeholder="键" value="${escapeHtml(field.key)}" data-entity="${index}" data-field="${fieldIdx}" data-type="key">
+                        <input class="value-input" type="text" placeholder="值" value="${escapeHtml(field.value)}" data-entity="${index}" data-field="${fieldIdx}" data-type="value">
+                        <button class="btn-remove" data-remove-field="${index},${fieldIdx}">✕</button>
+                    </div>`;
+                });
+                html += `</div>
+                    <div class="entity-actions">
+                        <button class="add-field-btn" data-add-field="${index}">➕ 添加字段</button>
+                    </div>
+                </div>`;
+            });
+            entityContainer.innerHTML = html;
+
+            // 绑定事件 (委托)
+            // 移除实体
+            document.querySelectorAll('[data-remove-entity]').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    const idx = parseInt(this.dataset.removeEntity);
+                    if (isNaN(idx)) return;
+                    if (entities[idx]) {
+                        entities.splice(idx, 1);
+                        renderAll();
+                    }
+                });
+            });
+            // 移除字段
+            document.querySelectorAll('[data-remove-field]').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    const [entityIdx, fieldIdx] = this.dataset.removeField.split(',').map(Number);
+                    if (isNaN(entityIdx) || isNaN(fieldIdx)) return;
+                    if (entities[entityIdx] && entities[entityIdx].fields) {
+                        entities[entityIdx].fields.splice(fieldIdx, 1);
+                        renderAll();
+                    }
+                });
+            });
+            // 添加字段
+            document.querySelectorAll('[data-add-field]').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    const idx = parseInt(this.dataset.addField);
+                    if (isNaN(idx)) return;
+                    if (entities[idx]) {
+                        entities[idx].fields.push({ key: '', value: '' });
+                        renderAll();
+                    }
+                });
+            });
+            // 输入框事件: key / value 变化
+            document.querySelectorAll('.key-input, .value-input').forEach(input => {
+                input.addEventListener('input', function(e) {
+                    const entityIdx = parseInt(this.dataset.entity);
+                    const fieldIdx = parseInt(this.dataset.field);
+                    const type = this.dataset.type; // 'key' or 'value'
+                    if (isNaN(entityIdx) || isNaN(fieldIdx)) return;
+                    if (!entities[entityIdx] || !entities[entityIdx].fields) return;
+                    const field = entities[entityIdx].fields[fieldIdx];
+                    if (!field) return;
+                    if (type === 'key') {
+                        field.key = this.value;
+                    } else {
+                        field.value = this.value;
+                    }
+                    // 实时更新JSON
+                    updateJSONPreview();
+                });
+            });
+            // 分类名称可编辑 - 双击修改 (简单处理: 使用contentEditable或弹出? 使用prompt)
+            document.querySelectorAll('.entity-header .badge-key').forEach(badge => {
+                badge.addEventListener('dblclick', function(e) {
+                    const entityGroup = this.closest('.entity-group');
+                    if (!entityGroup) return;
+                    const indexAttr = entityGroup.dataset.entityIndex;
+                    if (indexAttr === undefined) return;
+                    const idx = parseInt(indexAttr);
+                    if (isNaN(idx) || !entities[idx]) return;
+                    const newName = prompt('修改分类名称:', entities[idx].name);
+                    if (newName !== null && newName.trim() !== '') {
+                        entities[idx].name = newName.trim();
+                        renderAll();
+                    }
+                });
+                badge.style.cursor = 'pointer';
+                badge.title = '双击修改分类名称';
+            });
+        }
+
+        // 简单转义
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // 更新 JSON 预览
+        function updateJSONPreview() {
+            const compressed = getCompressedJSON();
+            const pretty = getPrettyJSON();
+            // 显示压缩格式 (但为了可读, 显示压缩)
+            if (compressed === '{}' || entities.length === 0 || Object.keys(buildJSON(entities)).length === 0) {
+                jsonOutput.innerHTML = `<span class="empty-hint">📭 暂无数据，请添加分类和字段</span>`;
+                tokenDisplay.textContent = 'Token: 0';
+                return;
+            }
+            // 显示紧凑 JSON (带换行便于阅读)
+            const displayText = compressed;
+            jsonOutput.textContent = displayText;
+            // token
+            const tokenEst = estimateTokens(displayText);
+            tokenDisplay.textContent = `Token: ${tokenEst}`;
+        }
+
+        // 添加新实体
+        function addEntity(name = '新分类') {
+            // 确保名称唯一
+            let baseName = name;
+            let counter = 1;
+            while (entities.some(e => e.name === baseName)) {
+                baseName = name + (counter++);
+            }
+            entities.push({
+                name: baseName,
+                fields: [
+                    { key: 'id', value: '' },
+                    { key: 't', value: '' },
+                    { key: 'c', value: '' }
+                ]
+            });
+            renderAll();
+        }
+
+        // 重置示例 (短键格式)
+        function loadExample() {
+            entities = [
+                {
+                    name: '游戏',
+                    fields: [
+                        { key: 'id', value: 'minecraft' },
+                        { key: 't', value: '沙盒游戏' },
+                        { key: 'c', value: '我的世界' }
+                    ]
+                },
+                {
+                    name: '游戏',
+                    fields: [
+                        { key: 'id', value: 'Counter_Strike' },
+                        { key: 't', value: 'FPS' },
+                        { key: 'c', value: '反恐精英' }
+                    ]
+                },
+                {
+                    name: '书籍',
+                    fields: [
+                        { key: 'id', value: 'three_body' },
+                        { key: 't', value: '科幻' },
+                        { key: 'c', value: '三体' }
+                    ]
+                }
+            ];
+            renderAll();
+        }
+
+        // ----- 事件绑定 -----
+        document.getElementById('addEntityBtn').addEventListener('click', function() {
+            addEntity('新分类');
+        });
+
+        document.getElementById('resetExampleBtn').addEventListener('click', function() {
+            loadExample();
+        });
+
+        document.getElementById('clearAllBtn').addEventListener('click', function() {
+            if (entities.length === 0) return;
+            if (confirm('确定清空所有数据吗？')) {
+                entities = [];
+                renderAll();
+            }
+        });
+
+        // 下载 JSON
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            const jsonStr = getCompressedJSON();
+            if (jsonStr === '{}' || entities.length === 0) {
+                alert('暂无数据可下载');
+                return;
+            }
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'knowledge_base.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // 复制
+        document.getElementById('copyBtn').addEventListener('click', function() {
+            const jsonStr = getCompressedJSON();
+            if (jsonStr === '{}' || entities.length === 0) {
+                alert('无数据可复制');
+                return;
+            }
+            navigator.clipboard.writeText(jsonStr).then(() => {
+                alert('✅ JSON 已复制到剪贴板');
+            }).catch(() => {
+                // fallback
+                const textarea = document.createElement('textarea');
+                textarea.value = jsonStr;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('✅ 已复制');
+            });
+        });
+
+        // 格式化预览 (弹窗或切换)
+        document.getElementById('formatViewBtn').addEventListener('click', function() {
+            const pretty = getPrettyJSON();
+            if (pretty === '{}' || entities.length === 0) {
+                alert('暂无数据');
+                return;
+            }
+            // 显示在预览区（临时切换）
+            jsonOutput.textContent = pretty;
+            // 但 token 显示为压缩后的
+            const compressed = getCompressedJSON();
+            const tokenEst = estimateTokens(compressed);
+            tokenDisplay.textContent = `Token: ${tokenEst} (格式化)`;
+            // 加个恢复? 简单处理：点击其他地方自动恢复? 或者加一个按钮切换? 
+            // 我们增加一个双击json区域恢复压缩
+            jsonOutput.ondblclick = function() {
+                updateJSONPreview();
+                jsonOutput.ondblclick = null;
+            };
+            // 提示
+            setTimeout(() => {
+                // 不自动恢复，让用户双击恢复
+            }, 100);
+        });
+
+        // 初始化: 加载示例
+        loadExample();
+
+        // 额外: 双击json输出恢复压缩预览
+        jsonOutput.addEventListener('dblclick', function() {
+            updateJSONPreview();
+        });
+
+        // 如果点击其他地方（比如左侧输入）会触发更新，已经绑定了
+        // 另: 如果实体名修改需要刷新
+        window.updateJSONPreview = updateJSONPreview;
+    })();
+</script>
+</body>
+</html>
