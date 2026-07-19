@@ -12,7 +12,8 @@ import ctypes.wintypes
 import importlib.util
 import re
 from datetime import datetime
-#在这里编写内容
+#在这里编写代码
+
 
 
 
@@ -44,7 +45,7 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 CORS(app)
 
 
-DEEPSEEK_API_KEY = ''#配置apikey，格式类似'sk-a1b2c3...'
+DEEPSEEK_API_KEY = ''#配置apikey，类似'sk-z1b2c3d4e5f6'
 DEEPSEEK_BASE_URL = 'https://api.deepseek.com'
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

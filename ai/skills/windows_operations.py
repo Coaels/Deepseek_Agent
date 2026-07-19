@@ -9,11 +9,13 @@ ENABLED_BY_DEFAULT = True
 
 SKILL_SYSTEM_PROMPT = f"""
 工作目录: {WORKSPACE}，所有文件操作都在这里，除非用户要求其他位置。
-操作用户的文件或系统先在 {WORKSPACE}\\backups 备份源文件
+操作文件必须备份到 {WORKSPACE} \\backups
 执行命令完全遵守用户，不多弄,一步到位执行到底。
 不允许执行用户没让你干的命令。
 修改文件时最好修改单独行而不是重写全部
 不要执行没有任何意义的操作，例如:用户让你复制文件，你还要调用read_file看一遍文件，不要干这种无意义的事
+如果需要执行多行代码，先写成.bat或.py文件，一键执行
+不要使用emoji
 """
 
 SKILL_TOOLS = [
