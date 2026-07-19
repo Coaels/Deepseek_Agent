@@ -2,7 +2,7 @@
 
 
 ## 项目说明
-模拟[OpenClaw](https://github.com/openclaw/openclaw)的部分功能，目前完成度为**75%**，支持**Skill**功能  
+模拟[OpenClaw](https://github.com/openclaw/openclaw)的部分功能，目前完成度为**80%**，支持**Skill**功能  
 部署到**Windows**上后，通过配置**Skill**实现一些操作，具体Skill编写方法请见下方  
 ------
 
@@ -11,6 +11,10 @@
 
 ------  
 # 更新日志  
+
+## V1.0  
+正式版1.0更新，修复90%bug，更改提示词  
+
 ## Beta1.0_Preload:  
 增加知识库功能，可以使用配套的工具生成知识库。生成工具为ai生成，仅作为体验，后续会优化。  
 修复bug:1、ai修改文件瞎备份  
@@ -21,8 +25,7 @@
 
 ## Alpha0.2.0:  
 修复上下文问题，解决第二次问ai，ai还会回答之前的问题的毛病  
-## 已更新skill:  
-图片生成，无需配置api，直接使用即可。感谢 [pollinations.ai](https://pollinations.ai)的免费生成!  
+
 
 ------
 
