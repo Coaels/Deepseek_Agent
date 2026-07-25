@@ -45,7 +45,7 @@ SKILL_TOOLS = [
         }
     }
 ]
-ENABLED_BY_DEFAULT = True
+ENABLED_BY_DEFAULT = False
 
 
 def handle_generate_image(prompt, width=1024, height=1024, filename=None):

@@ -12,9 +12,10 @@ SKILL_SYSTEM_PROMPT = f"""
 操作文件必须备份到 {WORKSPACE} \\backups
 执行命令完全遵守用户，不多弄,一步到位执行到底。
 不允许执行用户没让你干的命令。
-修改文件时最好修改单独行而不是重写全部
-不要执行没有任何意义的操作，例如:用户让你复制文件，你还要调用read_file看一遍文件，不要干这种无意义的事
+修改文件时尽量修改单处，不要重写整个文件
+如果可以用50行代码解决200行的代码，就只用50行
 如果需要执行多行代码，先写成.bat或.py文件，一键执行
+完成后，清除临时文件
 不要使用emoji
 """
 
@@ -81,12 +82,10 @@ def _truncate_text(text, max_len=8000):
 
 def _needs_temp_file(command):
     """判断命令是否需要写临时文件执行"""
-    # 1. 命令包含换行符
+
     if "\n" in command or "\r" in command:
         return True, command
 
-    # 2. python -c 命令：一律写临时文件
-    # Windows cmd 下 python -c 的引号处理太容易出问题
     if "python" in command.lower() and "-c" in command:
         code = None
         patterns = [
@@ -101,13 +100,13 @@ def _needs_temp_file(command):
                 break
         return True, code
 
-    # 3. 命令本身包含未配对的引号
+
     single_quotes = command.count("'") - command.count("\\'")
     double_quotes = command.count('"') - command.count('\\"')
     if single_quotes % 2 != 0 or double_quotes % 2 != 0:
         return True, command
 
-    # 4. 命令太长
+
     if len(command) > 500:
         return True, command
 
@@ -125,7 +124,6 @@ def handle_execute_command(command="", timeout=60):
     command = command.strip()
     original_command = command
 
-    # 检测是否需要写临时文件
     needs_temp, extracted = _needs_temp_file(command)
 
     if needs_temp:
@@ -133,21 +131,20 @@ def handle_execute_command(command="", timeout=60):
         if "python" in command.lower() and "-c" in command:
             code = extracted
             if code:
-                # 处理转义的换行符
+  
                 code = code.replace("\\n", "\n")
-                # 写入临时 .py 文件
+
                 temp_path = os.path.join(WORKSPACE, "_temp_cmd.py")
                 try:
                     with open(temp_path, "w", encoding="utf-8") as f:
                         f.write(code)
-                    # 用 python 执行临时文件
                     command = f'python "{temp_path}"'
                 except Exception as e:
                     return {"error": f"写入临时文件失败: {str(e)}"}
             else:
                 return {"error": "无法提取 python -c 后面的代码"}
         else:
-            # 普通命令，写入 .bat
+
             temp_path = os.path.join(WORKSPACE, "_temp_cmd.bat")
             try:
                 with open(temp_path, "w", encoding="utf-8") as f:
@@ -158,7 +155,7 @@ def handle_execute_command(command="", timeout=60):
             except Exception as e:
                 return {"error": f"写入临时文件失败: {str(e)}"}
 
-    # 执行命令
+
     try:
         if command.startswith("python "):
             # 尝试用列表形式执行，避免 shell 引号问题
@@ -199,7 +196,7 @@ def handle_execute_command(command="", timeout=60):
         output = result.stdout.strip() if result.stdout else ""
         stderr = result.stderr.strip() if result.stderr else ""
 
-        # 合并输出
+
         full_output = output
         if stderr and result.returncode != 0:
             full_output += f"\n[STDERR] {stderr}" if full_output else f"[STDERR] {stderr}"

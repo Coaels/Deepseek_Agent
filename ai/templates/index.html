@@ -11,12 +11,13 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #f5f5f7;
+            color: #1a1a1a;
             height: 100vh;
             display: flex;
             flex-direction: column;
         }
         .header {
-            padding: 12px 24px;
+            padding: 10px 24px;
             background: #fff;
             border-bottom: 1px solid #e8e8ed;
             display: flex;
@@ -24,30 +25,25 @@
             align-items: center;
             flex-shrink: 0;
         }
-        .header .logo { font-size: 18px; font-weight: 600; }
-        .header .logo .highlight { color: #3964fe; }
+        .header .logo { font-size: 18px; font-weight: 600; color: #1a1a1a; }
+        .header .logo .highlight { color: #6d5ef0; }
         .header-actions { display: flex; gap: 8px; }
         .header-actions button {
             padding: 6px 14px;
             border-radius: 8px;
             border: 1px solid #e0e0e6;
             background: #fff;
+            color: #1a1a1a;
             font-size: 13px;
             cursor: pointer;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            line-height: 1.2;
+            height: 32px;
         }
         .header-actions button:hover { background: #f0f0f2; }
-        .header-actions .btn-stop {
-            background: #ff3b30;
-            color: #fff;
-            border-color: #ff3b30;
-        }
-        .header-actions .btn-stop:hover { background: #e62e24; }
-        .header-actions .btn-stop:disabled {
-            background: #ccc;
-            border-color: #ccc;
-            cursor: not-allowed;
-        }
 
         .main-layout {
             flex: 1;
@@ -55,153 +51,137 @@
             overflow: hidden;
         }
 
-        .skill-sidebar {
-            width: 260px;
-            background: #101412;
-            border-right: 1px solid #202a25;
-            display: flex;
-            flex-direction: column;
-            transition: width 0.3s ease;
+        .skill-dropdown {
+            position: relative;
             flex-shrink: 0;
         }
-        .skill-sidebar.collapsed {
-            width: 44px;
-        }
-        .skill-sidebar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 14px;
-            border-bottom: 1px solid #202a25;
-            min-height: 48px;
-        }
-        .skill-sidebar.collapsed .skill-sidebar-header {
-            justify-content: center;
-            padding: 12px 8px;
-        }
-        .skill-sidebar-title {
-            color: #fff;
-            font-size: 14px;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            opacity: 1;
-            transition: opacity 0.2s ease;
-        }
-        .skill-sidebar.collapsed .skill-sidebar-title {
-            opacity: 0;
-            width: 0;
-        }
-        .skill-toggle-btn {
-            background: transparent;
-            border: none;
-            color: #888;
+        .skill-btn {
+            background: #fff;
+            border: 1px solid #e0e0e6;
+            color: #1a1a1a;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 13px;
             cursor: pointer;
-            font-size: 14px;
-            padding: 4px;
-            border-radius: 4px;
             transition: all 0.2s;
+            white-space: nowrap;
             display: flex;
             align-items: center;
-            justify-content: center;
-            width: 24px;
-            height: 24px;
+            gap: 4px;
         }
-        .skill-toggle-btn:hover {
-            background: #333;
-            color: #fff;
+        .skill-btn:hover {
+            background: #f0f0f2;
+            border-color: #6d5ef0;
+            color: #6d5ef0;
         }
-        .skill-sidebar.collapsed .skill-toggle-btn {
+        .skill-btn .arrow {
+            transition: transform 0.2s;
+            font-size: 10px;
+        }
+        .skill-btn.active .arrow {
             transform: rotate(180deg);
         }
-        .skill-content {
-            flex: 1;
+        .skill-panel {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: #fff;
+            border: 1px solid #e0e0e6;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+            min-width: 220px;
+            max-width: 320px;
+            max-height: 360px;
+            display: none;
+            flex-direction: column;
+            z-index: 100;
+        }
+        .skill-panel.open {
+            display: flex;
+        }
+        .skill-panel #skill-list {
             overflow-y: auto;
-            padding: 12px 14px;
-            opacity: 1;
-            transition: opacity 0.2s ease;
+            padding: 10px 0;
+            flex: 1;
+            min-height: 0;
         }
-        .skill-sidebar.collapsed .skill-content {
-            opacity: 0;
-            pointer-events: none;
-            padding: 0;
-        }
-        .skill-item {
-            margin: 8px 0;
+        .skill-panel .skill-item {
+            margin: 0;
             display: flex;
             align-items: flex-start;
             gap: 8px;
+            padding: 8px 14px;
             cursor: pointer;
+            transition: background 0.15s;
         }
-        .skill-item input[type="checkbox"] {
+        .skill-panel .skill-item:hover {
+            background: #f5f5f7;
+        }
+        .skill-panel .skill-item input[type="checkbox"] {
             margin-top: 2px;
-            accent-color: #3964fe;
+            accent-color: #6d5ef0;
             cursor: pointer;
         }
-        .skill-item label {
+        .skill-panel .skill-item label {
             cursor: pointer;
             flex: 1;
-            color: #fff;
+            color: #1a1a1a;
         }
-        .skill-name {
+        .skill-panel .skill-name {
             font-size: 13px;
             display: block;
             line-height: 1.3;
         }
-        .skill-desc {
-            color: #888;
+        .skill-panel .skill-desc {
+            color: #8e8e93;
             font-size: 11px;
             display: block;
             margin-top: 2px;
             line-height: 1.3;
         }
-        .skill-actions {
+        .skill-panel .skill-empty {
             padding: 12px 14px;
-            border-top: 1px solid #202a25;
-            opacity: 1;
-            transition: opacity 0.2s ease;
+            font-size: 12px;
+            color: #8e8e93;
+            text-align: center;
         }
-        .skill-sidebar.collapsed .skill-actions {
-            opacity: 0;
-            pointer-events: none;
-            padding: 0;
-            height: 0;
+        .skill-panel .skill-actions {
+            padding: 8px 14px;
+            border-top: 1px solid #e8e8ed;
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
         }
-        .skill-apply-btn {
-            width: 100%;
-            padding: 8px;
-            background: #3964fe;
-            border: none;
-            color: #fff;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: background 0.2s;
-        }
-        .skill-apply-btn:hover {
-            background: #2954e8;
-        }
-        .skill-refresh-btn {
-            width: 100%;
+        .skill-panel .skill-actions button {
+            flex: 1;
             padding: 6px;
-            background: #333;
-            border: 1px solid #444;
-            color: #ccc;
             border-radius: 6px;
             cursor: pointer;
             font-size: 12px;
-            margin-bottom: 8px;
+            border: 1px solid #e0e0e6;
             transition: all 0.2s;
+            font-family: inherit;
         }
-        .skill-refresh-btn:hover {
-            background: #444;
+        .skill-panel .skill-actions .skill-reload-btn {
+            background: #f5f5f7;
+            color: #555;
+        }
+        .skill-panel .skill-actions .skill-reload-btn:hover {
+            background: #ececf0;
+        }
+        .skill-panel .skill-actions .skill-apply-btn {
+            background: #6d5ef0;
+            border-color: #6d5ef0;
             color: #fff;
         }
+        .skill-panel .skill-actions .skill-apply-btn:hover {
+            background: #5d4ee0;
+        }
 
-        .chat-area { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
             background: #fff;
             overflow: hidden;
             min-width: 0;
@@ -216,24 +196,59 @@
         }
         .message {
             max-width: 85%;
+            animation: fadeIn 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .message-bubble {
             padding: 10px 16px;
             border-radius: 12px;
             line-height: 1.7;
             font-size: 14px;
-            animation: fadeIn 0.2s ease;
             word-break: break-word;
         }
-        .message.user { 
-            background: #3964fe; 
-            color: #fff;
-            align-self: flex-end; 
+        .message-actions {
+            display: none;
+            gap: 4px;
+            padding: 0 4px;
         }
-        .message.assistant { 
-            background: #f5f5f7; 
-            border: 1px solid #ececf0; 
-            align-self: flex-start; 
+        .message:hover .message-actions {
+            display: flex;
+        }
+        .message-actions button {
+            background: transparent;
+            border: none;
+            color: #8e8e93;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+        .message-actions button:hover {
+            background: #f0f0f2;
+            color: #6d5ef0;
+        }
+        .message.user {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+        .message.user .message-bubble {
+            background: #6d5ef0;
+            color: #fff;
+        }
+        .message.assistant {
+            align-self: flex-start;
+            align-items: flex-start;
             max-width: 95%;
             color: #1a1a1a;
+        }
+        .message.assistant .message-bubble {
+            background: #f5f5f7;
+            border: 1px solid #ececf0;
         }
         .message.assistant h1, .message.assistant h2, .message.assistant h3 {
             margin: 12px 0 8px;
@@ -312,7 +327,7 @@
         }
 
         .message.assistant blockquote {
-            border-left: 3px solid #3964fe;
+            border-left: 3px solid #6d5ef0;
             padding-left: 12px;
             margin: 8px 0;
             color: #555;
@@ -390,36 +405,37 @@
             line-height: 1.6;
         }
 
-        @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(4px); } 
-            to { opacity: 1; transform: translateY(0); } 
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         .cursor-blink {
             display: inline-block;
             width: 2px;
             height: 1.1em;
-            background: #3964fe;
+            background: #6d5ef0;
             animation: blink 0.9s step-end infinite;
             vertical-align: text-bottom;
             margin-left: 2px;
         }
         @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
         .input-area {
-            padding: 10px 24px 14px;
+            padding: 12px 24px 14px;
             border-top: 1px solid #e8e8ed;
             background: #fff;
             flex-shrink: 0;
         }
         .input-wrapper {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             background: #f5f5f7;
-            border-radius: 14px;
-            padding: 6px 8px 6px 16px;
+            border-radius: 12px;
+            padding: 10px 10px 10px 16px;
             border: 1px solid #e8e8ed;
-            align-items: flex-end;
+            align-items: stretch;
+            min-height: 89px;
         }
-        .input-wrapper:focus-within { border-color: #3964fe; }
+        .input-wrapper:focus-within { border-color: #6d5ef0; }
         .input-wrapper textarea {
             flex: 1;
             border: none;
@@ -427,36 +443,48 @@
             background: transparent;
             font-size: 14px;
             font-family: inherit;
+            color: #1a1a1a;
             resize: none;
-            padding: 6px 0;
-            min-height: 24px;
-            max-height: 150px;
+            padding: 8px 0;
+            min-height: 100%;
+            max-height: 200px;
             line-height: 1.6;
         }
         .input-wrapper .btn-send {
-            background: #3964fe;
+            background: #6d5ef0;
             border: none;
             color: #fff;
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 15px;
             flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
+            align-self: flex-end;
         }
-        .input-wrapper .btn-send:hover { background: #2954e8; }
+        .input-wrapper .btn-send:hover { background: #5d4ee0; }
         .input-wrapper .btn-send:disabled { background: #ccc; cursor: not-allowed; }
+        .input-wrapper .btn-send.is-stop {
+            background: #ff3b30;
+        }
+        .input-wrapper .btn-send.is-stop:hover {
+            background: #e62e24;
+        }
+        .input-wrapper .btn-send.is-stop:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
         .bottom-bar {
             display: flex;
             justify-content: space-between;
-            margin-top: 8px;
+            margin-top: 4px;
             font-size: 12px;
             color: #8e8e93;
         }
-        .bottom-bar .status.loading { color: #3964fe; }
+        .bottom-bar .status.loading { color: #6d5ef0; }
         .bottom-bar .status.stopped { color: #ff3b30; }
         .bottom-bar .status.error { color: #ff3b30; }
         .welcome-msg {
@@ -471,7 +499,7 @@
             align-items: center;
             gap: 4px;
             padding: 6px 14px;
-            background: #3964fe;
+            background: #6d5ef0;
             color: #fff;
             border: none;
             border-radius: 8px;
@@ -479,17 +507,20 @@
             cursor: pointer;
             margin-top: 8px;
         }
-        .retry-btn:hover { background: #2954e8; }
+        .retry-btn:hover { background: #5d4ee0; }
 
         .knowledge-dropdown {
             position: relative;
             flex-shrink: 0;
         }
+        .header-actions .knowledge-dropdown {
+            position: relative;
+        }
         .knowledge-btn {
             background: #fff;
             border: 1px solid #e0e0e6;
-            color: #555;
-            padding: 6px 12px;
+            color: #1a1a1a;
+            padding: 6px 14px;
             border-radius: 8px;
             font-size: 13px;
             cursor: pointer;
@@ -501,8 +532,8 @@
         }
         .knowledge-btn:hover {
             background: #f0f0f2;
-            border-color: #3964fe;
-            color: #3964fe;
+            border-color: #6d5ef0;
+            color: #6d5ef0;
         }
         .knowledge-btn .arrow {
             transition: transform 0.2s;
@@ -513,8 +544,8 @@
         }
         .knowledge-panel {
             position: absolute;
-            bottom: calc(100% + 8px);
-            left: 0;
+            top: calc(100% + 8px);
+            right: 0;
             background: #fff;
             border: 1px solid #e0e0e6;
             border-radius: 10px;
@@ -542,7 +573,7 @@
             background: #f5f5f7;
         }
         .knowledge-panel .knowledge-item input[type="checkbox"] {
-            accent-color: #3964fe;
+            accent-color: #6d5ef0;
             cursor: pointer;
         }
         .knowledge-panel .knowledge-item label {
@@ -565,7 +596,7 @@
         .knowledge-panel .knowledge-actions button {
             width: 100%;
             padding: 6px;
-            background: #3964fe;
+            background: #6d5ef0;
             border: none;
             color: #fff;
             border-radius: 6px;
@@ -574,34 +605,137 @@
             transition: background 0.2s;
         }
         .knowledge-panel .knowledge-actions button:hover {
-            background: #2954e8;
+            background: #5d4ee0;
         }
-        .deep-think-btn {
-            background: #fff;
-            border: 1px solid #e0e0e6;
-            color: #555;
-            padding: 6px 12px;
-            border-radius: 8px;
+        .model-dropdown {
+            position: relative;
+            flex-shrink: 0;
+            align-self: flex-end;
+        }
+        .model-btn {
+            background: transparent;
+            border: none;
+            color: #8e8e93;
+            padding: 0 4px;
+            height: 36px;
+            border-radius: 6px;
             font-size: 13px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: color 0.2s;
             white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            align-self: flex-end;
             flex-shrink: 0;
         }
-        .deep-think-btn:hover {
-            background: #f0f0f2;
-            border-color: #3964fe;
-            color: #3964fe;
+        .model-btn:hover {
+            color: #6d5ef0;
         }
-        .deep-think-btn.active {
-            background: #3964fe;
-            border-color: #3964fe;
+        .model-btn.active {
+            color: #6d5ef0;
+        }
+        .model-btn .arrow {
+            transition: transform 0.2s;
+            font-size: 9px;
+            margin-left: 1px;
+        }
+        .model-btn.active .arrow {
+            transform: rotate(180deg);
+        }
+        .model-panel {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            right: 0;
+            background: #fff;
+            border: 1px solid #e0e0e6;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+            min-width: 220px;
+            max-width: 280px;
+            padding: 10px 0;
+            display: none;
+            z-index: 100;
+        }
+        .model-panel.open {
+            display: block;
+        }
+        .model-panel .model-section {
+            padding: 8px 14px;
+            border-bottom: 1px solid #e8e8ed;
+        }
+        .model-panel .model-section:last-of-type {
+            border-bottom: none;
+        }
+        .model-panel .model-section-title {
+            font-size: 12px;
+            color: #8e8e93;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .model-panel .model-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+        .model-panel .model-option:hover {
+            color: #6d5ef0;
+        }
+        .model-panel .model-option input[type="radio"] {
+            accent-color: #6d5ef0;
+            cursor: pointer;
+        }
+        .model-panel .model-option label {
+            cursor: pointer;
+            font-size: 13px;
+            color: #1a1a1a;
+            flex: 1;
+        }
+        .model-panel .model-option:hover label {
+            color: #6d5ef0;
+        }
+        .model-panel .model-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+        }
+        .model-panel .model-toggle label {
+            font-size: 13px;
+            color: #1a1a1a;
+            cursor: pointer;
+            flex: 1;
+        }
+        .model-panel .model-toggle input[type="checkbox"] {
+            accent-color: #6d5ef0;
+            cursor: pointer;
+        }
+        .model-panel .model-actions {
+            padding: 8px 14px;
+            border-top: 1px solid #e8e8ed;
+            margin-top: 4px;
+        }
+        .model-panel .model-actions button {
+            width: 100%;
+            padding: 6px;
+            background: #6d5ef0;
+            border: none;
             color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+        .model-panel .model-actions button:hover {
+            background: #5d4ee0;
         }
         .thinking-block {
-            border: 1px solid #d8defe;
+            border: 1px solid #e4defc;
             border-radius: 10px;
-            background: #f7f9ff;
+            background: #f7f5ff;
             margin: 0 0 10px;
             overflow: hidden;
         }
@@ -611,7 +745,7 @@
             align-items: center;
             padding: 8px 12px;
             cursor: pointer;
-            color: #3964fe;
+            color: #6d5ef0;
             font-size: 13px;
             font-weight: 600;
             user-select: none;
@@ -623,12 +757,14 @@
         }
         .thinking-body {
             padding: 10px 12px;
-            color: #4c5874;
+            color: #5a5276;
             font-size: 13px;
             line-height: 1.6;
             max-height: 320px;
-            overflow: auto;
-            border-top: 1px solid #d8defe;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            border-top: 1px solid #e4defc;
             opacity: 1;
             transition: max-height 0.28s ease, padding 0.28s ease, opacity 0.22s ease, border-color 0.28s ease;
         }
@@ -638,6 +774,109 @@
             opacity: 0;
             border-top-color: transparent;
             overflow: hidden;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+        }
+        .modal-overlay.open {
+            display: flex;
+            animation: modalFadeIn 0.18s ease;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .modal-box {
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+            min-width: 320px;
+            max-width: 420px;
+            padding: 22px 24px 18px;
+            animation: modalPopIn 0.22s cubic-bezier(0.2, 0.8, 0.3, 1.2);
+        }
+        @keyframes modalPopIn {
+            from { transform: scale(0.92) translateY(8px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .modal-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+        .modal-message {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .modal-btn {
+            padding: 7px 18px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            border: 1px solid #e0e0e6;
+            background: #fff;
+            color: #555;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .modal-btn:hover {
+            background: #f5f5f7;
+        }
+        .modal-btn.primary {
+            background: #6d5ef0;
+            border-color: #6d5ef0;
+            color: #fff;
+        }
+        .modal-btn.primary:hover {
+            background: #5d4ee0;
+        }
+        .modal-btn.danger {
+            background: #ff3b30;
+            border-color: #ff3b30;
+            color: #fff;
+        }
+        .modal-btn.danger:hover {
+            background: #e62e24;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(40, 40, 50, 0.92);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 13px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+            z-index: 1100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.22s ease, transform 0.22s ease;
+            max-width: 80vw;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-4px);
         }
     </style>
 <base target="_blank">
@@ -649,26 +888,40 @@
     <div class="header">
         <div><span class="logo">Coain</span></div>
         <div class="header-actions">
+            <div class="knowledge-dropdown" id="knowledgeDropdown">
+                <button class="knowledge-btn" id="knowledgeBtn" onclick="toggleKnowledgePanel()">
+                    <span>知识库</span>
+                    <span class="arrow">&#9662;</span>
+                </button>
+                <div class="knowledge-panel" id="knowledgePanel">
+                    <div id="knowledge-list">
+                        <div class="knowledge-empty">加载中...</div>
+                    </div>
+                    <div class="knowledge-actions">
+                        <button onclick="saveKnowledge()">应用</button>
+                    </div>
+                </div>
+            </div>
+            <div class="skill-dropdown" id="skillDropdown">
+                <button class="skill-btn" id="skillBtn" onclick="toggleSkillPanel()">
+                    <span>Skills</span>
+                    <span class="arrow">&#9662;</span>
+                </button>
+                <div class="skill-panel" id="skillPanel">
+                    <div id="skill-list">
+                        <div class="skill-empty">加载中...</div>
+                    </div>
+                    <div class="skill-actions">
+                        <button class="skill-reload-btn" onclick="reloadSkills()">重载</button>
+                        <button class="skill-apply-btn" onclick="saveSkills()">应用</button>
+                    </div>
+                </div>
+            </div>
             <button onclick="clearChat()"> 清空</button>
-            <button class="btn-stop" id="stopBtn" onclick="stopAI()" disabled>[停止]</button>
         </div>
     </div>
 
     <div class="main-layout">
-        <div class="skill-sidebar collapsed" id="skillSidebar">
-            <div class="skill-sidebar-header">
-                <span class="skill-sidebar-title">Skills</span>
-                <button class="skill-toggle-btn" onclick="toggleSkillSidebar()" title="折叠/展开">&#9664;</button>
-            </div>
-            <div class="skill-content" id="skillContent">
-                <div id="skill-list">加载中...</div>
-            </div>
-            <div class="skill-actions">
-                <button class="skill-refresh-btn" onclick="loadSkills()">刷新</button>
-                <button class="skill-apply-btn" onclick="saveSkills()">应用</button>
-            </div>
-        </div>
-
         <div class="chat-area">
             <div class="messages" id="messages">
                 <div class="welcome-msg"></div>
@@ -676,23 +929,36 @@
 
             <div class="input-area">
                 <div class="input-wrapper">
-                    <div class="knowledge-dropdown" id="knowledgeDropdown">
-                        <button class="knowledge-btn" id="knowledgeBtn" onclick="toggleKnowledgePanel()">
-                            <span>知识库</span>
+                    <textarea id="userInput" rows="1" placeholder="输入指令..."></textarea>
+                    <div class="model-dropdown" id="modelDropdown">
+                        <button class="model-btn" id="modelBtn" onclick="toggleModelPanel()" title="模型设置">
+                            <span class="model-text">Flash</span>
                             <span class="arrow">&#9662;</span>
                         </button>
-                        <div class="knowledge-panel" id="knowledgePanel">
-                            <div id="knowledge-list">
-                                <div class="knowledge-empty">加载中...</div>
+                        <div class="model-panel" id="modelPanel">
+                            <div class="model-section">
+                                <div class="model-section-title">选择模型</div>
+                                <div class="model-option">
+                                    <input type="radio" id="model-flash" name="model" value="flash" checked>
+                                    <label for="model-flash">Deepseek-v4-flash</label>
+                                </div>
+                                <div class="model-option">
+                                    <input type="radio" id="model-pro" name="model" value="pro">
+                                    <label for="model-pro">Deepseek-v4-Pro</label>
+                                </div>
                             </div>
-                            <div class="knowledge-actions">
-                                <button onclick="saveKnowledge()">应用</button>
+                            <div class="model-section">
+                                <div class="model-toggle">
+                                    <label for="deepThinkingCheck">深度思考</label>
+                                    <input type="checkbox" id="deepThinkingCheck">
+                                </div>
+                            </div>
+                            <div class="model-actions">
+                                <button onclick="saveModelSettings()">应用</button>
                             </div>
                         </div>
                     </div>
-                    <button class="deep-think-btn" id="deepThinkBtn" onclick="toggleDeepThinking()">深度思考：关</button>
-                    <textarea id="userInput" rows="1" placeholder="输入指令..."></textarea>
-                    <button class="btn-send" id="sendBtn">></button>
+                    <button class="btn-send" id="sendBtn" onclick="sendOrStop()">></button>
                 </div>
                 <div class="bottom-bar">
                     <span><kbd style="background:#f0f0f2;padding:1px 6px;border-radius:4px;border:1px solid #e0e0e6;">Enter</kbd> 发送</span>
@@ -702,36 +968,119 @@
         </div>
     </div>
 
+    <!-- 自定义弹窗 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-box">
+            <div class="modal-title" id="modalTitle"></div>
+            <div class="modal-message" id="modalMessage"></div>
+            <div class="modal-actions">
+                <button class="modal-btn" id="modalCancelBtn">取消</button>
+                <button class="modal-btn primary" id="modalConfirmBtn">确认</button>
+            </div>
+        </div>
+    </div>
+    <!-- Toast 提示 -->
+    <div class="toast" id="toast"></div>
+
     <script>
+        // ===== 自定义弹窗 & Toast =====
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+        const modalCancelBtn = document.getElementById('modalCancelBtn');
+        const toastEl = document.getElementById('toast');
+        let toastTimer = null;
+
+        function showModal(options) {
+            return new Promise((resolve) => {
+                modalTitle.textContent = options.title || '提示';
+                modalMessage.textContent = options.message || '';
+                const confirmBtn = modalConfirmBtn;
+                const cancelBtn = modalCancelBtn;
+
+                // 按钮样式
+                confirmBtn.className = 'modal-btn ' + (options.danger ? 'danger' : 'primary');
+                confirmBtn.textContent = options.confirmText || '确认';
+                cancelBtn.textContent = options.cancelText || '取消';
+                cancelBtn.style.display = options.showCancel === false ? 'none' : '';
+
+                modalOverlay.classList.add('open');
+
+                const cleanup = () => {
+                    modalOverlay.classList.remove('open');
+                    confirmBtn.onclick = null;
+                    cancelBtn.onclick = null;
+                    document.removeEventListener('keydown', onKey);
+                };
+                const onKey = (e) => {
+                    if (e.key === 'Escape') { cleanup(); resolve(false); }
+                    else if (e.key === 'Enter') { cleanup(); resolve(true); }
+                };
+                confirmBtn.onclick = () => { cleanup(); resolve(true); };
+                cancelBtn.onclick = () => { cleanup(); resolve(false); };
+                modalOverlay.onclick = (e) => {
+                    if (e.target === modalOverlay) { cleanup(); resolve(false); }
+                };
+                document.addEventListener('keydown', onKey);
+                setTimeout(() => confirmBtn.focus(), 50);
+            });
+        }
+
+        function showToast(message, duration) {
+            toastEl.textContent = message;
+            toastEl.classList.add('show');
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toastEl.classList.remove('show');
+            }, duration || 2200);
+        }
+
         let isReplying = false;
         let currentMsgDiv = null;
-        let currentContent = '';
         let sessionId = 'default';
         let abortController = null;
         let lastUserMessage = '';
+        let currentModel = 'flash';
         let deepThinkingEnabled = false;
-        let currentThinking = '';
+        let currentSegments = []; // [{type: 'thinking'|'interim'|'text', content: '...'}]
         let currentThinkingExpanded = false;
         let currentThinkingActive = false;
+
+        function pushSegment(type, content) {
+            if (currentSegments.length > 0 && currentSegments[currentSegments.length - 1].type === type) {
+                currentSegments[currentSegments.length - 1].content += content;
+            } else {
+                currentSegments.push({ type, content });
+            }
+        }
         let thinkingDotTimer = null;
         let thinkingDotText = '.';
 
         const container = document.getElementById('messages');
         const input = document.getElementById('userInput');
         const sendBtn = document.getElementById('sendBtn');
-        const stopBtn = document.getElementById('stopBtn');
         const status = document.getElementById('status');
-        const skillSidebar = document.getElementById('skillSidebar');
+        const skillBtn = document.getElementById('skillBtn');
+        const skillPanel = document.getElementById('skillPanel');
         const knowledgeBtn = document.getElementById('knowledgeBtn');
         const knowledgePanel = document.getElementById('knowledgePanel');
-        const deepThinkBtn = document.getElementById('deepThinkBtn');
+        const modelBtn = document.getElementById('modelBtn');
+        const modelPanel = document.getElementById('modelPanel');
+        const modelDropdown = document.getElementById('modelDropdown');
 
-        sendBtn.addEventListener('click', function() { sendMessage(); });
+        function sendOrStop() {
+            if (isReplying) {
+                stopAI();
+            } else {
+                sendMessage();
+            }
+        }
 
         input.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                sendMessage();
+                sendOrStop();
             }
         });
 
@@ -746,6 +1095,16 @@
                 knowledgePanel.classList.remove('open');
                 knowledgeBtn.classList.remove('active');
             }
+            const skillDropdownEl = document.getElementById('skillDropdown');
+            if (!skillDropdownEl.contains(e.target)) {
+                skillPanel.classList.remove('open');
+                skillBtn.classList.remove('active');
+            }
+            const modelDropdownEl = document.getElementById('modelDropdown');
+            if (!modelDropdownEl.contains(e.target)) {
+                modelPanel.classList.remove('open');
+                modelBtn.classList.remove('active');
+            }
         });
 
         function escapeHtml(text) {
@@ -754,14 +1113,160 @@
             return div.innerHTML;
         }
 
-        function addMessage(role, content) {
+        let userMsgCounter = 0; // 用户消息计数器（1-based）
+        let currentBubbleDiv = null; // 当前 AI 消息的气泡 div
+
+        function addMessage(role, content, options) {
             const div = document.createElement('div');
             div.className = 'message ' + role;
-            div.innerHTML = content;
+
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.innerHTML = content;
+            div.appendChild(bubble);
+
+            // 加操作按钮
+            if (role === 'user') {
+                if (options && options.userIndex) {
+                    div.dataset.userIndex = options.userIndex;
+                } else {
+                    userMsgCounter++;
+                    div.dataset.userIndex = userMsgCounter;
+                }
+                const actions = document.createElement('div');
+                actions.className = 'message-actions';
+                actions.innerHTML =
+                    '<button onclick="editUserMessage(this)" title="编辑后重发">编辑</button>' +
+                    '<button onclick="retryUserMessage(this)" title="重新生成">重试</button>';
+                div.appendChild(actions);
+            } else if (role === 'assistant') {
+                const actions = document.createElement('div');
+                actions.className = 'message-actions';
+                actions.innerHTML = '<button onclick="regenerateAssistant(this)" title="重新生成">重生成</button>';
+                div.appendChild(actions);
+            }
+
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
             return div;
         }
+
+        function findUserIndexFromAssistant(assistantDiv) {
+            // 找到该 AI 消息前面最近的 user 消息的 index
+            let prev = assistantDiv.previousElementSibling;
+            while (prev) {
+                if (prev.classList.contains('user')) {
+                    return parseInt(prev.dataset.userIndex, 10);
+                }
+                prev = prev.previousElementSibling;
+            }
+            return null;
+        }
+
+        function editUserMessage(btn) {
+            const msgDiv = btn.closest('.message.user');
+            const userIndex = parseInt(msgDiv.dataset.userIndex, 10);
+            // 从 bubble 提取原始文本
+            const bubble = msgDiv.querySelector('.message-bubble');
+            const originalText = bubble ? bubble.textContent : '';
+
+            // 把文本填回输入框，进入编辑模式
+            input.value = originalText;
+            input.focus();
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+
+            // 标记当前是编辑模式
+            editingState = { userIndex: userIndex, msgDiv: msgDiv };
+            status.textContent = '[编辑] 修改后发送将替换此消息及之后的回复';
+            status.className = 'status loading';
+        }
+
+        function retryUserMessage(btn) {
+            const msgDiv = btn.closest('.message.user');
+            const userIndex = parseInt(msgDiv.dataset.userIndex, 10);
+            startRegenerate(userIndex, msgDiv, true);
+        }
+
+        function regenerateAssistant(btn) {
+            const msgDiv = btn.closest('.message.assistant');
+            const userIndex = findUserIndexFromAssistant(msgDiv);
+            if (!userIndex) return;
+            startRegenerate(userIndex, msgDiv, false);
+        }
+
+        async function startRegenerate(userIndex, fromDiv, deleteUserMsg) {
+            if (isReplying) {
+                showToast('请等待当前回复完成');
+                return;
+            }
+
+            // 删除该消息 div 及之后的所有 div
+            let next = fromDiv.nextElementSibling;
+            while (next) {
+                const nn = next.nextElementSibling;
+                next.remove();
+                next = nn;
+            }
+            if (deleteUserMsg) {
+                fromDiv.remove();
+            } else {
+                // 重新生成时删除 AI 消息本身
+                fromDiv.remove();
+            }
+
+            isReplying = true;
+            sendBtn.disabled = false;
+            sendBtn.classList.add('is-stop');
+            sendBtn.textContent = '■';
+            status.textContent = '[工作中] AI 重新生成中...';
+            status.className = 'status loading';
+
+            currentMsgDiv = document.createElement('div');
+            currentMsgDiv.className = 'message assistant';
+            currentBubbleDiv = document.createElement('div');
+            currentBubbleDiv.className = 'message-bubble';
+            currentBubbleDiv.innerHTML = '<span class="cursor-blink"></span>';
+            currentMsgDiv.appendChild(currentBubbleDiv);
+            container.appendChild(currentMsgDiv);
+            container.scrollTop = container.scrollHeight;
+            currentSegments = [];
+            currentThinkingExpanded = false;
+            currentThinkingActive = false;
+            stopThinkingDots();
+            editingState = null;
+
+            abortController = new AbortController();
+
+            try {
+                const response = await fetch('/api/chat/regenerate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        user_msg_index: userIndex,
+                        deep_thinking: deepThinkingEnabled,
+                        model: currentModel
+                    }),
+                    signal: abortController.signal
+                });
+
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                await consumeStream(response);
+                if (isReplying) finishMessage(true);
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    currentBubbleDiv.innerHTML += '<br><br><span style="color:#ff3b30;">[已停止]</span>';
+                    finishMessage(false);
+                } else {
+                    currentBubbleDiv.innerHTML = '[错误]  ' + escapeHtml(error.message) +
+                        '<br><button class="retry-btn" onclick="retryMessage()">[重试]</button>';
+                    finishMessage(false, true);
+                }
+            }
+        }
+
+        let editingState = null; // { userIndex, msgDiv }
 
         function addCodeFolding(html) {
             const temp = document.createElement('div');
@@ -912,7 +1417,35 @@
         }
 
         function renderCurrentMessage() {
-            return renderThinkingBlock(currentThinking) + renderMessage(currentContent);
+            // 按 segments 实际顺序渲染: thinking 进思考块, text 和 interim 按实际位置交错显示
+            // 这样工具调用会出现在它实际执行的位置（两次文字之间），而不是全部堆在一起
+            let html = '';
+            let thinkingBuffer = '';
+            let hasThinking = false;
+
+            function flushThinking() {
+                if (hasThinking) {
+                    html += renderThinkingBlock(thinkingBuffer);
+                }
+                thinkingBuffer = '';
+                hasThinking = false;
+            }
+
+            for (const seg of currentSegments) {
+                if (seg.type === 'thinking') {
+                    hasThinking = true;
+                    thinkingBuffer += seg.content;
+                } else {
+                    flushThinking();
+                    // 跳过纯空白文本段，避免空消息
+                    if (seg.type === 'text' && !seg.content.trim()) {
+                        continue;
+                    }
+                    html += renderMessage(seg.content);
+                }
+            }
+            flushThinking();
+            return html;
         }
 
         function toggleThinkingBlock(header) {
@@ -945,49 +1478,126 @@
             thinkingDotText = '.';
         }
 
-        function updateDeepThinkingBtn() {
-            deepThinkBtn.textContent = deepThinkingEnabled ? '深度思考：开' : '深度思考：关';
-            deepThinkBtn.classList.toggle('active', deepThinkingEnabled);
+        function updateModelBtn() {
+            const modelText = currentModel === 'pro' ? 'Pro' : 'Flash';
+            modelBtn.innerHTML = '<span class="model-text">' + modelText + '</span><span class="arrow">&#9662;</span>';
+            modelBtn.classList.toggle('active', deepThinkingEnabled);
         }
 
-        async function clearContextForMode() {
-            await fetch('/api/context/clear', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: sessionId })
-            });
-            container.innerHTML = '<div class="welcome-msg"></div>';
-            lastUserMessage = '';
-            currentContent = '';
-            currentThinking = '';
-            currentThinkingExpanded = false;
-            currentThinkingActive = false;
-            stopThinkingDots();
+        function toggleModelPanel() {
+            modelPanel.classList.toggle('open');
+            modelBtn.classList.toggle('active', modelPanel.classList.contains('open'));
         }
 
-        async function toggleDeepThinking() {
-            if (isReplying) return;
-            const nextEnabled = !deepThinkingEnabled;
-            const ok = confirm('切换深度思考会清空历史对话和上下文，是否继续？');
-            if (!ok) return;
+        function saveModelSettings() {
+            const selectedModel = document.querySelector('input[name="model"]:checked')?.value || 'flash';
+            const deepThinkingChecked = document.getElementById('deepThinkingCheck').checked;
+
+            currentModel = selectedModel;
+            deepThinkingEnabled = deepThinkingChecked;
+
+            updateModelBtn();
+
+            modelPanel.classList.remove('open');
+            modelBtn.classList.remove('active');
+
+            status.textContent = '模型：' + (currentModel === 'pro' ? 'Pro' : 'Flash') +
+                (deepThinkingEnabled ? '，深度思考开启' : '，深度思考关闭');
+            status.className = 'status';
+        }
+
+        function toggleSkillPanel() {
+            skillPanel.classList.toggle('open');
+            skillBtn.classList.toggle('active');
+        }
+
+        async function reloadSkills() {
             try {
-                await clearContextForMode();
-                deepThinkingEnabled = nextEnabled;
-                updateDeepThinkingBtn();
-                status.textContent = nextEnabled ? '深度思考已开启' : '深度思考已关闭';
-                status.className = 'status';
-            } catch (e) {
-                alert('切换失败: ' + e);
-            }
-        }
+                const resp = await fetch('/api/skills/reload', { method: 'POST' });
+                const data = await resp.json();
+                const sessionResp = await fetch('/api/skills/session?session_id=' + sessionId);
+                const sessionData = await sessionResp.json();
+                const enabled = sessionData.enabled_skills || [];
 
-        function toggleSkillSidebar() {
-            skillSidebar.classList.toggle('collapsed');
+                const list = document.getElementById('skill-list');
+                if (!data.skills || data.skills.length === 0) {
+                    list.innerHTML = '<div class="skill-empty">暂无 Skills</div>';
+                    showToast('已重载，暂无 Skills');
+                    return;
+                }
+
+                list.innerHTML = data.skills.map(s => `
+                    <div class="skill-item">
+                        <input type="checkbox" id="skill-${s.name}" name="skill" value="${s.name}" ${enabled.includes(s.name) ? 'checked' : ''}>
+                        <label for="skill-${s.name}">
+                            <span class="skill-name">${s.display_name}</span>
+                            <span class="skill-desc">${s.description}</span>
+                        </label>
+                    </div>
+                `).join('');
+                showToast('已重载 ' + data.skills.length + ' 个 Skills');
+            } catch (e) {
+                showToast('重载失败: ' + e);
+            }
         }
 
         function toggleKnowledgePanel() {
             knowledgePanel.classList.toggle('open');
             knowledgeBtn.classList.toggle('active');
+        }
+
+        async function consumeStream(response) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    try {
+                        const data = JSON.parse(line);
+                        if (data.type === 'heartbeat') continue;
+
+                        if (data.type === 'text') {
+                            if (currentThinkingActive) {
+                                currentThinkingActive = false;
+                                stopThinkingDots();
+                            }
+                            pushSegment('text', data.content);
+                            currentBubbleDiv.innerHTML = renderCurrentMessage() + '<span class="cursor-blink"></span>';
+                            container.scrollTop = container.scrollHeight;
+                        } else if (data.type === 'thinking') {
+                            pushSegment('thinking', data.content);
+                            currentThinkingActive = true;
+                            startThinkingDots();
+                            currentBubbleDiv.innerHTML = renderCurrentMessage() + '<span class="cursor-blink"></span>';
+                            container.scrollTop = container.scrollHeight;
+                        } else if (data.type === 'interim') {
+                            // 深度思考模式下：思考还在进行时，工具调用进思考块内显示
+                            // 思考已结束后，工具调用保持在外面显示
+                            if (currentThinkingActive) {
+                                pushSegment('thinking', '\n' + data.content);
+                            } else {
+                                pushSegment('interim', data.content);
+                            }
+                            currentBubbleDiv.innerHTML = renderCurrentMessage() + '<span class="cursor-blink"></span>';
+                            container.scrollTop = container.scrollHeight;
+                        } else if (data.type === 'done') {
+                            finishMessage(true);
+                            return;
+                        }
+                    } catch (e) {
+                        console.error('解析行失败:', line, e);
+                    }
+                }
+            }
         }
 
         async function sendMessage(isRetry) {
@@ -996,7 +1606,10 @@
             const text = isRetry ? lastUserMessage : input.value.trim();
             if (!text) return;
 
-            if (!isRetry) lastUserMessage = text;
+            // 检测是否是编辑模式
+            const isEditing = !!editingState && !isRetry;
+
+            if (!isRetry && !isEditing) lastUserMessage = text;
             if (!isRetry) {
                 input.value = '';
                 input.style.height = 'auto';
@@ -1004,21 +1617,54 @@
 
             const welcome = container.querySelector('.welcome-msg');
             if (welcome) welcome.remove();
-            if (!isRetry) addMessage('user', escapeHtml(text));
+
+            let url = '/api/chat/stream';
+            let payload = { message: text, session_id: sessionId, deep_thinking: deepThinkingEnabled, model: currentModel };
+
+            if (isEditing) {
+                // 编辑模式: 删除原消息及之后的 div, 复用原 userIndex
+                const oldDiv = editingState.msgDiv;
+                const oldUserIndex = editingState.userIndex;
+                let next = oldDiv.nextElementSibling;
+                while (next) {
+                    const nn = next.nextElementSibling;
+                    next.remove();
+                    next = nn;
+                }
+                oldDiv.remove();
+
+                // 用新内容重新加 user 消息, 但保留原 userIndex
+                addMessage('user', escapeHtml(text), { userIndex: oldUserIndex });
+
+                url = '/api/chat/edit';
+                payload = {
+                    message: text,
+                    session_id: sessionId,
+                    user_msg_index: oldUserIndex,
+                    deep_thinking: deepThinkingEnabled,
+                    model: currentModel
+                };
+                editingState = null;
+            } else if (!isRetry) {
+                addMessage('user', escapeHtml(text));
+            }
 
             isReplying = true;
-            sendBtn.disabled = true;
-            stopBtn.disabled = false;
+            sendBtn.disabled = false;
+            sendBtn.classList.add('is-stop');
+            sendBtn.textContent = '■';
             status.textContent = '[工作中] AI 处理中...';
             status.className = 'status loading';
 
             currentMsgDiv = document.createElement('div');
             currentMsgDiv.className = 'message assistant';
-            currentMsgDiv.innerHTML = '<span class="cursor-blink"></span>';
+            currentBubbleDiv = document.createElement('div');
+            currentBubbleDiv.className = 'message-bubble';
+            currentBubbleDiv.innerHTML = '<span class="cursor-blink"></span>';
+            currentMsgDiv.appendChild(currentBubbleDiv);
             container.appendChild(currentMsgDiv);
             container.scrollTop = container.scrollHeight;
-            currentContent = '';
-            currentThinking = '';
+            currentSegments = [];
             currentThinkingExpanded = false;
             currentThinkingActive = false;
             stopThinkingDots();
@@ -1026,61 +1672,23 @@
             abortController = new AbortController();
 
             try {
-                const response = await fetch('/api/chat/stream', {
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text, session_id: sessionId, deep_thinking: deepThinkingEnabled }),
+                    body: JSON.stringify(payload),
                     signal: abortController.signal
                 });
 
                 if (!response.ok) throw new Error('HTTP ' + response.status);
-
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop() || '';
-
-                    for (const line of lines) {
-                        if (!line.trim()) continue;
-                        try {
-                            const data = JSON.parse(line);
-                            if (data.type === 'heartbeat') continue;
-
-                            if (data.type === 'text') {
-                                currentContent += data.content;
-                                currentMsgDiv.innerHTML = renderCurrentMessage() + '<span class="cursor-blink"></span>';
-                                container.scrollTop = container.scrollHeight;
-                            } else if (data.type === 'thinking') {
-                                currentThinking += data.content;
-                                currentThinkingActive = true;
-                                startThinkingDots();
-                                currentMsgDiv.innerHTML = renderCurrentMessage() + '<span class="cursor-blink"></span>';
-                                container.scrollTop = container.scrollHeight;
-                            } else if (data.type === 'done') {
-                                finishMessage(true);
-                                return;
-                            }
-                        } catch (e) {
-                            console.error('解析行失败:', line, e);
-                        }
-                    }
-                }
-
+                await consumeStream(response);
                 if (isReplying) finishMessage(true);
 
             } catch (error) {
                 if (error.name === 'AbortError') {
-                    currentMsgDiv.innerHTML += '<br><br><span style="color:#ff3b30;">[已停止]</span>';
+                    currentBubbleDiv.innerHTML += '<br><br><span style="color:#ff3b30;">[已停止]</span>';
                     finishMessage(false);
                 } else {
-                    currentMsgDiv.innerHTML = '[错误]  ' + escapeHtml(error.message) + 
+                    currentBubbleDiv.innerHTML = '[错误]  ' + escapeHtml(error.message) +
                         '<br><button class="retry-btn" onclick="retryMessage()">[重试]</button>';
                     finishMessage(false, true);
                 }
@@ -1099,7 +1707,7 @@
 
             currentThinkingActive = false;
             stopThinkingDots();
-            currentMsgDiv.innerHTML = renderCurrentMessage();
+            currentBubbleDiv.innerHTML = renderCurrentMessage();
 
             if (isError) {
                 status.textContent = '[失败]';
@@ -1111,7 +1719,8 @@
 
             isReplying = false;
             sendBtn.disabled = false;
-            stopBtn.disabled = true;
+            sendBtn.classList.remove('is-stop');
+            sendBtn.textContent = '>';
             abortController = null;
             loadFiles();
         }
@@ -1130,6 +1739,13 @@
         }
 
         async function clearChat() {
+            const ok = await showModal({
+                title: '清空对话',
+                message: '确定要清空当前对话吗？历史消息将无法恢复。',
+                confirmText: '清空',
+                danger: true
+            });
+            if (!ok) return;
             try {
                 await fetch('/api/clear', {
                     method: 'POST',
@@ -1138,6 +1754,9 @@
                 });
                 container.innerHTML = '<div class="welcome-msg"></div>';
                 lastUserMessage = '';
+                userMsgCounter = 0;
+                editingState = null;
+                showToast('对话已清空');
             } catch (e) {}
         }
 
@@ -1159,7 +1778,7 @@
 
                 const list = document.getElementById('skill-list');
                 if (!data.skills || data.skills.length === 0) {
-                    list.innerHTML = '<span style="color: #666;">暂无 Skills</span>';
+                    list.innerHTML = '<div class="skill-empty">暂无 Skills</div>';
                     return;
                 }
 
@@ -1173,7 +1792,7 @@
                     </div>
                 `).join('');
             } catch (e) {
-                document.getElementById('skill-list').innerHTML = '<span style="color: #666;">加载失败</span>';
+                document.getElementById('skill-list').innerHTML = '<div class="skill-empty">加载失败</div>';
             }
         }
 
@@ -1190,9 +1809,9 @@
                     })
                 });
                 const data = await resp.json();
-                alert('Skills 已更新: ' + (data.enabled_skills.join(', ') || '无'));
+                showToast('Skills 已更新: ' + (data.enabled_skills.join(', ') || '无'));
             } catch (e) {
-                alert('保存失败: ' + e);
+                showToast('保存失败: ' + e);
             }
         }
 
@@ -1235,18 +1854,18 @@
                     })
                 });
                 const data = await resp.json();
-                alert('知识库已更新: ' + (data.enabled_knowledge.join(', ') || '无'));
+                showToast('知识库已更新: ' + (data.enabled_knowledge.join(', ') || '无'));
                 knowledgePanel.classList.remove('open');
                 knowledgeBtn.classList.remove('active');
             } catch (e) {
-                alert('保存失败: ' + e);
+                showToast('保存失败: ' + e);
             }
         }
 
         loadSkills();
         loadFiles();
         loadKnowledge();
-        updateDeepThinkingBtn();
+        updateModelBtn();
     </script>
 
 </body>
