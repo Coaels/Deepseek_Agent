@@ -2,7 +2,7 @@
 
 
 ## 项目说明
-模拟[OpenClaw](https://github.com/openclaw/openclaw)的部分功能，目前完成度为**80%**，支持**Skill**功能  
+模拟[OpenClaw](https://github.com/openclaw/openclaw)的部分功能，目前完成度为**86%**，支持**Skill**功能  
 部署到**Windows**上后，通过配置**Skill**实现一些操作，具体Skill编写方法请见下方  
 ------
 
