@@ -30,10 +30,14 @@ SKILL_SYSTEM_PROMPT = """
 3. 禁止连搜多次碰运气
 4. 下载图片必须使用curl，不要下缩略图
 5. 配合上下文理解思考
+6. 如果第一次搜索不准确，直接换搜索引擎
+7. 用户原话若已含空格（如"Python 教程""csgo 饰品"），不要主动去掉空格；
+   搜索后端会启用精确短语模式，结果即使少也是精准的，不要再改成无空格版本重搜
 分析示例：
 - "停雨"→先搜天气→看预报判断何时停，不是直接搜"停雨"
 - "北京热吗"→搜"北京天气"
 - "Python教程"→直接搜"Python教程"，不要加"入门""菜鸟"等
+- "南阳 骨科"→直接搜"南阳 骨科"（带空格原样传），系统会自动精确短语匹配
 
 警告：搜索禁止拆分、加空格、添加用户没说的词。最多2次，搜不到就说不知道。
 """
@@ -147,34 +151,135 @@ def _get_encoding(resp):
     return "utf-8"
 
 
-def _search_bing(query, max_results):
-    """模拟真实 Bing 搜索，返回精准结果列表"""
+def _extract_query_terms(query):
+    """从查询词中提取有意义的检索项：
+    - 中文：2字滑动窗口（bigram），如"卤素灯泡"→"卤素""素灯""灯泡"
+    - 字母数字：3字符及以上的串（如 35W、csgo、CS2）
+    bigram 比整段中文更宽容——好结果可能只含部分词，整段匹配会漏判。
+    """
+    terms = set()
+    for chunk in re.findall(r"[\u4e00-\u9fff]+", query):
+        if len(chunk) >= 2:
+            for i in range(len(chunk) - 1):
+                terms.add(chunk[i:i + 2].lower())
+    for m in re.findall(r"[A-Za-z0-9]{3,}", query):
+        terms.add(m.lower())
+    return list(terms)
+
+
+def _extract_query_segments(query):
+    """按空格把 query 分成多个词段，每段提取检索项。
+    返回 List[Set[str]]，每个 Set 是该词段的 bigram/3+字符串集合。
+    用于"按词段集中命中"校验，避免分散命中蒙混过关。
+    例如 "日本熊本县 7.1级地震 2026" →
+      [{"日本","本熊","熊本","本县"}, {"级地","地震"}, {"2026"}]
+    """
+    segments = []
+    for part in query.split():
+        terms = set()
+        for chunk in re.findall(r"[\u4e00-\u9fff]+", part):
+            if len(chunk) >= 2:
+                for i in range(len(chunk) - 1):
+                    terms.add(chunk[i:i + 2].lower())
+        for m in re.findall(r"[A-Za-z0-9]{3,}", part):
+            terms.add(m.lower())
+        if terms:
+            segments.append(terms)
+    return segments
+
+
+def _results_look_relevant(query, results):
+    """检查搜索结果是否与查询相关。
+    Bing 反爬时会返回标题正确但内容随机的"假搜索页"，
+    用查询词是否出现在结果标题/摘要中来判断。
+
+    核心规则：按词段集中命中——把 query 按空格分成多个词段，
+    要求至少一条结果集中命中某一个词段的多数 bigram。
+    避免分散命中（"日本"来自A段+"地震"来自B段）蒙混过关。
+    """
+    # 整段命中捷径：把 query 整段（含空格，whitespace 归一化）作为子串直接匹配。
+    # 对于"Bing 精确短语模式"返回的结果，标题/摘要里出现完整 query 是强相关信号，
+    # 避免被 bigram 规则误杀。query 太短（<4 字符）时不开此捷径，防止过宽。
+    q_compact = re.sub(r"\s+", " ", query.lower()).strip()
+    use_phrase_shortcut = len(q_compact) >= 4
+    for r in results:
+        if "error" in r:
+            continue
+        blob = (r.get("title", "") + " " + r.get("snippet", "")).lower()
+        if use_phrase_shortcut and q_compact in blob:
+            return True
+
+    # 按词段集中命中：要求至少一条结果命中某一个词段的多数 bigram
+    # 阈值规则：≤2 个 bigram 的词段要求全中（避免"地震"单字蒙混过关），
+    #          >2 个 bigram 的词段要求 ceil(n/2) 但至少 2 个
+    segments = _extract_query_segments(query)
+    if segments:
+        for r in results:
+            if "error" in r:
+                continue
+            blob = (r.get("title", "") + " " + r.get("snippet", "")).lower()
+            for seg_terms in segments:
+                n = len(seg_terms)
+                threshold = n if n <= 2 else max(2, (n + 1) // 2)
+                matched = sum(1 for t in seg_terms if t in blob)
+                if matched >= threshold:
+                    return True
+        return False  # 所有词段都没集中命中 → 不相关
+
+    # fallback：无法分词段时（纯单字/纯符号），默认认为相关
+    terms = _extract_query_terms(query)
+    if not terms:
+        return True
+    required = min(2, len(terms))
+    for r in results:
+        if "error" in r:
+            continue
+        blob = (r.get("title", "") + " " + r.get("snippet", "")).lower()
+        matched = sum(1 for t in terms if t in blob)
+        if matched >= required:
+            return True
+    return False
+
+
+def _search_bing_once(query, max_results, use_phrase=True):
+    """单次 Bing 搜索。
+    use_phrase=True（默认）：把 query 用双引号包裹，强制 Bing 做精确短语匹配，
+        避免把带空格的词（如 "Python 教程"）拆成多个独立关键词。
+    use_phrase=False：宽匹配（旧行为），作为精确无结果时的兜底。
+    返回：结果列表（可能为空）或包含 error 的列表。
+    """
     import time
     import random
     import urllib.parse
     from bs4 import BeautifulSoup
 
     # 1. 构造真实 URL
-    encoded_query = urllib.parse.quote(query)
+    # 精确短语模式：用双引号包裹 query（query 本身已含引号则不再加，避免双引号嵌套）
+    if use_phrase and '"' not in query:
+        phrased = f'"{query}"'
+    else:
+        phrased = query
+    encoded_query = urllib.parse.quote(phrased, safe='')
     search_url = f"https://cn.bing.com/search?q={encoded_query}&form=QBLH"
 
-    # 2. 完整浏览器请求头（2026 年 Edge 最新指纹）
+    # 2. 请求头：使用 curl_cffi 模拟时不覆盖 UA / Sec-Ch-Ua（避免与 TLS 指纹不匹配），
+    #    只在回退到普通 requests 时手动设 Chrome UA。
     headers = {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br, zstd",
         "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
         "Cache-Control": "max-age=0",
-        "Connection": "keep-alive",
-        "Sec-Ch-Ua": '"Not/A)Brand";v="99", "Microsoft Edge";v="115", "Chromium";v="115"',
-        "Sec-Ch-Ua-Mobile": "?0",
-        "Sec-Ch-Ua-Platform": '"Windows"',
         "Sec-Fetch-Dest": "document",
         "Sec-Fetch-Mode": "navigate",
         "Sec-Fetch-Site": "none",
         "Sec-Fetch-User": "?1",
         "Upgrade-Insecure-Requests": "1",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188",
     }
+    if not USE_CURL:
+        # 未使用 curl_cffi 时手动设 Chrome UA（与 impersonate="chrome" 保持一致）
+        headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+        headers["Sec-Ch-Ua"] = '"Not/A)Brand";v="99", "Chromium";v="115"'
+        headers["Sec-Ch-Ua-Mobile"] = "?0"
+        headers["Sec-Ch-Ua-Platform"] = '"Windows"'
 
     # 3. 预热：获取首页 Cookie（确保 MUID、SRCHD 等）
     try:
@@ -198,16 +303,16 @@ def _search_bing(query, max_results):
             soup = BeautifulSoup(resp.text, "lxml")
             results = []
 
-            # 优先选择 ol#b_results 下的 li.b_algo（标准结构）
+            # 只在 ol#b_results 下取 li.b_algo（标准结构）；
+            # 不再 fallback 到全局 .b_algo——避免在反爬假页/首页上误取无关条目
             result_container = soup.select_one("ol#b_results")
-            if result_container:
-                items = result_container.select("li.b_algo")
-            else:
-                items = soup.select("li.b_algo")
+            if not result_container:
+                continue
+            items = result_container.select("li.b_algo")
 
-            if not items:
-                # Fallback：某些情况下可能使用不同的类
-                items = soup.select(".b_algo")
+            # Bing "无结果"页会带 .b_no，直接跳过重试
+            if soup.select_one(".b_no"):
+                continue
 
             for item in items:
                 a = item.select_one("h2 a")
@@ -259,7 +364,21 @@ def _search_bing(query, max_results):
                 return [{"error": f"必应失败: {str(e)}"}]
             continue
 
-    return [{"error": "必应未返回任何结果"}]
+    return []  # 无结果：返回空列表（区别于 error），让上层决定是否走宽匹配 fallback
+
+
+def _search_bing(query, max_results):
+    """Bing 搜索入口：先精确短语匹配，0 结果时降级到宽匹配。
+
+    精确短语模式解决了"Python 教程"这类带空格查询词被 Bing 拆成两个独立关键词
+    （隐式 AND）后结果不准的问题；宽匹配兜底则保证稀有 query 不会完全没结果。
+    """
+    results = _search_bing_once(query, max_results, use_phrase=True)
+    # 精确模式有结果（正常结果或网络错误）→ 直接返回；让上层决定 fallback 到搜狗
+    if results:
+        return results
+    # 精确模式 0 结果 → 降级到宽匹配
+    return _search_bing_once(query, max_results, use_phrase=False)
 
 
 def _search_sogou(query, max_results):
@@ -310,11 +429,13 @@ def _search_sogou(query, max_results):
 def handle_search_web(query, max_results=5):
     """
     必应/搜狗网页搜索。
-    先尝试必应，失败则回退到搜狗。
+    先尝试必应，若必应返回错误或结果与查询无关（反爬假页）则回退到搜狗。
     """
     bing_results = _search_bing(query, max_results)
     valid_bing = [r for r in bing_results if "error" not in r]
-    if valid_bing:
+    # 关键：校验 Bing 结果是否真的和查询相关。
+    # Bing 反爬时会返回标题正确但内容随机的"假搜索页"，必须过滤掉。
+    if valid_bing and _results_look_relevant(query, valid_bing):
         return {
             "query": query,
             "engine": "bing",
@@ -322,6 +443,7 @@ def handle_search_web(query, max_results=5):
             "results": valid_bing
         }
 
+    # Bing 不可用或返回垃圾结果，回退到搜狗
     sogou_results = _search_sogou(query, max_results)
     valid_sogou = [r for r in sogou_results if "error" not in r]
     if valid_sogou:
@@ -330,6 +452,15 @@ def handle_search_web(query, max_results=5):
             "engine": "sogou",
             "results_count": len(valid_sogou),
             "results": valid_sogou
+        }
+
+    # 搜狗也没结果：若 Bing 至少有结果（即便不相关）也比空着强，兜底返回
+    if valid_bing:
+        return {
+            "query": query,
+            "engine": "bing",
+            "results_count": len(valid_bing),
+            "results": valid_bing
         }
 
     errors = []

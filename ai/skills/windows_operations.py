@@ -9,14 +9,14 @@ ENABLED_BY_DEFAULT = True
 
 SKILL_SYSTEM_PROMPT = f"""
 工作目录: {WORKSPACE}，所有文件操作都在这里，除非用户要求其他位置。
-操作文件必须备份到 {WORKSPACE} \\backups
+操作文件必须先询问用户后一起操作。如果要求备份，备份到 {WORKSPACE} \\backups
 执行命令完全遵守用户，不多弄,一步到位执行到底。
 不允许执行用户没让你干的命令。
 修改文件时尽量修改单处，不要重写整个文件
 如果可以用50行代码解决200行的代码，就只用50行
 如果需要执行多行代码，先写成.bat或.py文件，一键执行
 完成后，清除临时文件
-不要使用emoji
+写代码不要使用emoji和注释
 """
 
 SKILL_TOOLS = [
@@ -29,6 +29,21 @@ SKILL_TOOLS = [
                 "type": "object",
                 "properties": {"command": {"type": "string"}},
                 "required": ["command"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "execute_python",
+            "description": "执行 Python 代码",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "code": {"type": "string", "description": "要执行的 Python 代码，可多行"},
+                    "timeout": {"type": "integer", "description": "超时秒数，默认60"}
+                },
+                "required": ["code"]
             }
         }
     },
@@ -111,6 +126,68 @@ def _needs_temp_file(command):
         return True, command
 
     return False, None
+
+
+def handle_execute_python(code, timeout=60):
+    """
+    执行 Python 代码，写入临时 .py 文件后运行，避免 python -c 的引号和转义问题。
+    支持多行代码，标准输出和错误都会返回。
+    """
+    if not code or not code.strip():
+        return {"error": "代码不能为空"}
+
+    temp_path = os.path.join(WORKSPACE, "_temp_py.py")
+    try:
+        with open(temp_path, "w", encoding="utf-8") as f:
+            f.write(code)
+    except Exception as e:
+        return {"error": f"写入临时文件失败: {str(e)}"}
+
+    try:
+        result = subprocess.run(
+            ["python", temp_path],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=WORKSPACE,
+            encoding="utf-8",
+            errors="replace"
+        )
+
+        output = result.stdout
+        stderr = result.stderr
+
+        full_output = output.strip() if output else ""
+        if stderr and result.returncode != 0:
+            full_output += f"\n[STDERR] {stderr.strip()}" if full_output else f"[STDERR] {stderr.strip()}"
+        elif stderr and stderr.strip():
+            full_output += f"\n[警告] {stderr.strip()}" if full_output else f"[警告] {stderr.strip()}"
+
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            pass
+
+        return {
+            "output": full_output or "(执行完成，无输出)",
+            "returncode": result.returncode
+        }
+
+    except subprocess.TimeoutExpired:
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            pass
+        return {"error": f"执行超时（{timeout}秒）"}
+    except Exception as e:
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            pass
+        return {"error": f"执行失败: {str(e)}"}
 
 
 def handle_execute_command(command="", timeout=60):

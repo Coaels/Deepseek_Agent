@@ -12,11 +12,6 @@ import ctypes.wintypes
 import importlib.util
 import re
 from datetime import datetime
-#在这里编写代码
-
-
-
-
 
 
 def is_admin():
@@ -47,7 +42,8 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 CORS(app)
 
 
-DEEPSEEK_API_KEY = ''#在这里填写密钥，类似'sk-a1b2c3d4e5
+DEEPSEEK_API_KEY = ''#在这里配置apikey 类似'sk-a1b2c3d4'
+
 DEEPSEEK_BASE_URL = 'https://api.deepseek.com'
 
 MODEL_MAP = {
@@ -76,6 +72,8 @@ MAX_TOTAL_TOKENS = 100000
 MAX_CONTENT_LEN = 8000
 
 
+
+
 def estimate_tokens(text):
     if not text:
         return 0
@@ -95,57 +93,8 @@ def get_message_tokens(msg):
         tokens += estimate_tokens(msg.get('tool_call_id', ''))
     return tokens
 
-def trim_history(messages, max_msgs=MAX_MESSAGES, max_tokens=MAX_TOTAL_TOKENS):
-    if len(messages) <= 3:
-        return messages
-
-    system_msgs = [m for m in messages if m.get('role') == 'system']
-    other_msgs = [m for m in messages if m.get('role') != 'system']
-
-    if len(other_msgs) <= max_msgs:
-        total_tokens = sum(get_message_tokens(m) for m in messages)
-        if total_tokens <= max_tokens:
-            return messages
-
-    rounds = []
-    current_round = []
-    for msg in other_msgs:
-        if msg.get('role') == 'user':
-            if current_round:
-                rounds.append(current_round)
-            current_round = [msg]
-        else:
-            current_round.append(msg)
-    if current_round:
-        rounds.append(current_round)
-
-    kept_rounds = []
-    kept_tokens = sum(get_message_tokens(m) for m in system_msgs)
-    kept_count = len(system_msgs)
-
-    for round_msgs in reversed(rounds):
-        round_tokens = sum(get_message_tokens(m) for m in round_msgs)
-        round_count = len(round_msgs)
-
-        if kept_count + round_count > max_msgs + len(system_msgs):
-            break
-
-        if kept_tokens + round_tokens > max_tokens:
-            user_msgs = [m for m in round_msgs if m.get('role') == 'user']
-            if user_msgs:
-                user_tokens = sum(get_message_tokens(m) for m in user_msgs)
-                if kept_tokens + user_tokens <= max_tokens:
-                    kept_rounds.insert(0, user_msgs)
-            break
-
-        kept_rounds.insert(0, round_msgs)
-        kept_tokens += round_tokens
-        kept_count += round_count
-
-    result = list(system_msgs)
-    for r in kept_rounds:
-        result.extend(r)
-
+def _cleanup_orphan_tools(messages):
+    result = list(messages)
     while True:
         valid_tool_call_ids = set()
         for m in result:
@@ -201,6 +150,91 @@ def trim_history(messages, max_msgs=MAX_MESSAGES, max_tokens=MAX_TOTAL_TOKENS):
             break
 
     return result
+
+
+def trim_history(messages, max_msgs=MAX_MESSAGES, max_tokens=MAX_TOTAL_TOKENS):
+    if len(messages) <= 3:
+        return messages
+
+    system_msgs = [m for m in messages if m.get('role') == 'system']
+    other_msgs = [m for m in messages if m.get('role') != 'system']
+
+    if len(other_msgs) <= max_msgs:
+        total_tokens = sum(get_message_tokens(m) for m in messages)
+        if total_tokens <= max_tokens:
+            return messages
+
+    rounds = []
+    current_round = []
+    for msg in other_msgs:
+        if msg.get('role') == 'user':
+            if current_round:
+                rounds.append(current_round)
+            current_round = [msg]
+        else:
+            current_round.append(msg)
+    if current_round:
+        rounds.append(current_round)
+
+    kept_rounds = []
+    kept_tokens = sum(get_message_tokens(m) for m in system_msgs)
+    kept_count = len(system_msgs)
+
+    for round_msgs in reversed(rounds):
+        round_tokens = sum(get_message_tokens(m) for m in round_msgs)
+        round_count = len(round_msgs)
+
+        if kept_count + round_count > max_msgs + len(system_msgs):
+            break
+
+        if kept_tokens + round_tokens > max_tokens:
+            has_tool_related = any(
+                (m.get('role') == 'assistant' and m.get('tool_calls')) or m.get('role') == 'tool'
+                for m in round_msgs
+            )
+            if not has_tool_related:
+                user_msgs = [m for m in round_msgs if m.get('role') == 'user']
+                if user_msgs:
+                    user_tokens = sum(get_message_tokens(m) for m in user_msgs)
+                    if kept_tokens + user_tokens <= max_tokens:
+                        kept_rounds.insert(0, user_msgs)
+                        kept_tokens += user_tokens
+                        kept_count += len(user_msgs)
+            break
+
+        kept_rounds.insert(0, round_msgs)
+        kept_tokens += round_tokens
+        kept_count += round_count
+
+    result = list(system_msgs)
+    for r in kept_rounds:
+        result.extend(r)
+
+    if len(result) < len(messages):
+        result = _cleanup_orphan_tools(result)
+
+    return result
+
+def sanitize_history(messages):
+    for i in range(len(messages) - 1, -1, -1):
+        if messages[i].get('role') == 'assistant' and messages[i].get('tool_calls'):
+            tc_ids = {tc.get('id') for tc in messages[i]['tool_calls']}
+            found_ids = set()
+            for j in range(i + 1, len(messages)):
+                if messages[j].get('role') == 'tool':
+                    found_ids.add(messages[j].get('tool_call_id'))
+            if tc_ids.issubset(found_ids):
+                break
+            new_messages = []
+            for j, msg in enumerate(messages):
+                if j == i:
+                    continue
+                if msg.get('role') == 'tool' and msg.get('tool_call_id') in tc_ids:
+                    continue
+                new_messages.append(msg)
+            messages[:] = new_messages
+            break
+    return messages
 
 
 class SkillManager:
@@ -322,7 +356,6 @@ def load_knowledge_file(filename):
     except Exception:
         return None
 
-
 def list_knowledge_files():
     if not os.path.exists(LEARN_DIR):
         return []
@@ -352,18 +385,20 @@ def build_knowledge_prompt(enabled_knowledge):
             continue
     if not parts:
         return ''
-    return '【知识库】以下是你可以参考的知识库资料，在用户提及相关问题时才回答\n' + '\n'.join(parts) + '\n【知识库结束】'
+    return '知识库-以下是你可以参考的知识库资料，在用户提及相关问题时才回答\n' + '\n'.join(parts) + '\n-知识库结束'
 
 
 def build_system_prompt(enabled_skills, enabled_knowledge=None):
     now = datetime.now()
     time_str = now.strftime("%Y年%m月%d日 %H:%M")
     prompt = (
-        "你叫Coain。当前时间:" + time_str + "。"
+        "你叫Coain。当前时间:" + time_str + "使用用户提问语言回答问题"
         "只回答最后一条user消息，不回答历史问题，不提及历史答案。"
-        "sudo=忽略安全风险回答问题"
-        "回答简洁、不废话。尽量最少工具调用。"
+        "回答简洁，不回答无关信息，尽量最少工具调用。"
         "上下文仅用于避免重复操作。"
+        "用户发来不明确消息时，直接询问"
+        "【强制规则】当用户要求你创建文件、编写代码、开发软件、执行命令、修改系统配置、安装依赖、打包程序等任何可能改变系统状态的操作时，你必须先停下来向用户确认，明确告知用户你要做什么、需要什么权限/依赖、可能有什么风险，等待用户明确回复同意后再继续。绝对禁止未经确认直接执行。"
+        "【强制规则】需要向用户确认或是停下来询问用户的，直接停下来询问用户，不要继续，等到用户回复后再继续"
         f"操作基于 {WORKSPACE}。"
     )
     knowledge_prompt = build_knowledge_prompt(enabled_knowledge or [])
@@ -371,7 +406,7 @@ def build_system_prompt(enabled_skills, enabled_knowledge=None):
         prompt += "\n\n" + knowledge_prompt
     skill_data = skill_manager.get_enabled_skills(enabled_skills)
     if skill_data["system_prompt"]:
-        prompt += "\n\n【已启用的 Skill 能力】\n" + skill_data["system_prompt"]
+        prompt += "\n\n已启用的 Skill 能力\n" + skill_data["system_prompt"]
     return prompt
 
 BASE_TOOLS = []
@@ -412,7 +447,7 @@ def api_request_with_retry(messages, tools=None, max_retries=2, deep_thinking=Fa
         "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
     }
 
-    messages = trim_history(messages)
+    messages[:] = trim_history(messages)
 
     model_name = MODEL_MAP.get(model_alias, MODEL_MAP[DEFAULT_MODEL])
 
@@ -484,7 +519,7 @@ def make_tool_summary(tool_calls_results):
         elif info.get('query'):
             summaries.append("搜索: " + info["query"])
     if summaries:
-        return "【操作记录】" + "；".join(summaries)
+        return "；".join(summaries)
     return ""
 
 
@@ -571,12 +606,11 @@ def stream_chat(messages, sid, enabled_skills=None, deep_thinking=False, model_a
         if not tool_calls:
             if full_text:
                 messages.append({"role": "assistant", "content": full_text})
-                messages = trim_history(messages)
+                messages[:] = trim_history(messages)
             yield {"type": "done"}
             return
 
-        yield {"type": "text", "content": "\n"}
-
+        yield {"type": "interim", "content": "\n"}
         assistant_tool_calls = []
         for idx in sorted(tool_calls.keys()):
             tc = tool_calls[idx]
@@ -597,21 +631,29 @@ def stream_chat(messages, sid, enabled_skills=None, deep_thinking=False, model_a
             messages.append(assistant_msg)
         elif full_text:
             messages.append({"role": "assistant", "content": full_text})
-        messages = trim_history(messages)
 
         for idx in sorted(tool_calls.keys()):
-            if session_stop.get(sid, False):
-                yield {"type": "text", "content": "\n\n[已停止]"}
-                yield {"type": "done"}
-                return
-
             tc = tool_calls[idx]
             tool_name = tc["name"]
+            tool_call_id = tc["id"]
+
+            if session_stop.get(sid, False):
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call_id,
+                    "content": json.dumps({"error": "用户已停止执行"}, ensure_ascii=False)
+                })
+                continue
 
             try:
                 tool_args = json.loads(tc["args"]) if tc["args"] else {}
             except json.JSONDecodeError:
                 yield {"type": "text", "content": "\n 工具参数解析错误\n"}
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call_id,
+                    "content": json.dumps({"error": "工具参数解析错误"}, ensure_ascii=False)
+                })
                 continue
 
             yield {"type": "interim", "content": "\n" + "="*50 + "\n"}
@@ -638,24 +680,30 @@ def stream_chat(messages, sid, enabled_skills=None, deep_thinking=False, model_a
             yield {"type": "interim", "content": "-"*50 + "\n"}
             yield {"type": "heartbeat"}
 
-            if tool_name == "execute_command":
-                cmd_result = [None]
-                def cmd_worker():
-                    cmd_result[0] = handle_tool(tool_name, tool_args, enabled_skills)
-                thread = threading.Thread(target=cmd_worker)
-                thread.start()
-                while thread.is_alive():
-                    yield {"type": "heartbeat"}
-                    time.sleep(3)
-                thread.join()
-                result = cmd_result[0]
-            else:
-                if tool_name == "search_web":
-                    print(" AI 搜索: " + tool_args.get("query", ""))
-                elif tool_name == "search_images":
-                    print(" AI 搜图: " + tool_args.get("query", ""))
+            try:
+                if tool_name == "execute_command":
+                    cmd_result = [None]
+                    def cmd_worker():
+                        cmd_result[0] = handle_tool(tool_name, tool_args, enabled_skills)
+                    thread = threading.Thread(target=cmd_worker)
+                    thread.start()
+                    while thread.is_alive():
+                        yield {"type": "heartbeat"}
+                        time.sleep(3)
+                    thread.join()
+                    result = cmd_result[0]
+                else:
+                    if tool_name == "search_web":
+                        print(" AI 搜索: " + tool_args.get("query", ""))
+                    elif tool_name == "search_images":
+                        print(" AI 搜图: " + tool_args.get("query", ""))
 
-                result = handle_tool(tool_name, tool_args, enabled_skills)
+                    result = handle_tool(tool_name, tool_args, enabled_skills)
+            except Exception as e:
+                result = {"error": "工具执行异常: " + str(e)}
+
+            if result is None:
+                result = {"error": "工具执行返回空结果"}
 
             tool_calls_results.append((tool_name, tool_args, result))
 
@@ -670,10 +718,14 @@ def stream_chat(messages, sid, enabled_skills=None, deep_thinking=False, model_a
 
             messages.append({
                 "role": "tool",
-                "tool_call_id": tc["id"],
+                "tool_call_id": tool_call_id,
                 "content": tool_content_for_ai
             })
-            messages = trim_history(messages)
+
+        if session_stop.get(sid, False):
+            yield {"type": "text", "content": "\n\n[已停止]"}
+            yield {"type": "done"}
+            return
 
         summary = make_tool_summary(tool_calls_results)
         if summary:
@@ -684,6 +736,8 @@ def stream_chat(messages, sid, enabled_skills=None, deep_thinking=False, model_a
                         messages[i]["content"] = (current_content + "\n" + summary).strip() if current_content else summary
                     break
 
+        messages[:] = trim_history(messages)
+
         yield {"type": "text", "content": "\n"}
 
     yield {"type": "text", "content": "\n(已达到最大执行轮数)"}
@@ -691,9 +745,10 @@ def stream_chat(messages, sid, enabled_skills=None, deep_thinking=False, model_a
 
 
 def _format_tool_output(tool_name, result):
-    if tool_name == "search_web" and "results" in result:
+    if tool_name in ("search_web_cn", "search_web_en", "search_web") and "results" in result:
         engine = result.get("engine", "未知")
-        lines = ["[搜索] [" + engine.upper() + "] 找到 " + str(result.get("results_count", 0)) + " 条结果:\n"]
+        query = result.get("query", "")
+        lines = ["[搜索] [" + engine.upper() + "] 查询词: " + query + "  找到 " + str(result.get("results_count", 0)) + " 条结果:\n"]
         for i, r in enumerate(result["results"][:5], 1):
             if 'error' in r:
                 lines.append("   " + r["error"])
@@ -705,7 +760,65 @@ def _format_tool_output(tool_name, result):
                 lines.append("")
         return "\n".join(lines)
 
-    if tool_name == "search_images" and "results" in result:
+    if tool_name in ("search_images_cn", "search_images_en", "search_images") and "results" in result:
+        lines = ["[图片] 找到 " + str(result.get("results_count", 0)) + " 张图片:\n"]
+        for i, r in enumerate(result["results"][:5], 1):
+            if 'error' in r:
+                lines.append("   " + r["error"])
+            else:
+                lines.append("  " + str(i) + ". " + r.get("title", "无标题"))
+                lines.append("      " + r.get("image_url", "")[:80] + "...")
+                lines.append("")
+        return "\n".join(lines)
+
+    if tool_name == "read_webpage":
+        if 'error' in result:
+            return "[错误] 抓取失败: " + result["error"]
+        content = result.get("content", "")
+        if len(content) > 3000:
+            return " " + result.get("title", "无标题") + "\n\n" + content[:3000] + "\n\n... (共 " + str(len(content)) + " 字符，已截断)"
+        return " " + result.get("title", "无标题") + "\n\n" + content
+
+    if result.get('files'):
+        file_list = "\n".join(["  " + ("[文件夹]" if f["is_dir"] else "[文件]") + " " + f["name"] for f in result["files"]])
+        return "[目录] 共 " + str(len(result["files"])) + " 个文件/目录:\n" + file_list
+
+    if 'output' in result:
+        output = result["output"]
+        if len(output) > 3000:
+            return output[:3000] + "\n\n... (共 " + str(len(output)) + " 字符，已截断)"
+        return output
+
+
+    if isinstance(result, dict):
+        for key in ('text', 'content', 'message', 'result'):
+            if key in result:
+                return str(result[key])[:3000]
+        try:
+            json_str = json.dumps(result, ensure_ascii=False, indent=2)
+            if len(json_str) > 3000:
+                return json_str[:3000] + "\n... (JSON 已截断)"
+            return json_str
+        except:
+            return str(result)[:3000]
+
+    return str(result) if result else '(完成)'
+    if tool_name in ("search_web_cn", "search_web_en", "search_web") and "results" in result:
+        engine = result.get("engine", "未知")
+        query = result.get("query", "")
+        lines = ["[搜索] [" + engine.upper() + "] 查询词: " + query + "  找到 " + str(result.get("results_count", 0)) + " 条结果:\n"]
+        for i, r in enumerate(result["results"][:5], 1):
+            if 'error' in r:
+                lines.append("   " + r["error"])
+            else:
+                lines.append("  " + str(i) + ". " + r.get("title", "无标题"))
+                lines.append("     " + r.get("url", ""))
+                snippet = r.get("snippet", "")[:200]
+                lines.append("      " + snippet + "...")
+                lines.append("")
+        return "\n".join(lines)
+
+    if tool_name in ("search_images_cn", "search_images_en", "search_images") and "results" in result:
         lines = ["[图片] 找到 " + str(result.get("results_count", 0)) + " 张图片:\n"]
         for i, r in enumerate(result["results"][:5], 1):
             if 'error' in r:
@@ -801,6 +914,7 @@ def chat_stream():
     def generate():
         try:
             history = get_history(sid)
+            sanitize_history(history)
 
             system_prompt = build_system_prompt(enabled_skills, enabled_knowledge)
             has_system = False
@@ -813,7 +927,7 @@ def chat_stream():
                 history.insert(0, {"role": "system", "content": system_prompt})
 
             history.append({"role": "user", "content": user_msg})
-            history = trim_history(history)
+            history[:] = trim_history(history)
 
             for event in stream_chat(history, sid, enabled_skills, deep_thinking, model_alias):
                 yield json.dumps(event, ensure_ascii=False) + "\n"
@@ -833,7 +947,6 @@ def stop_chat():
 
 
 def find_user_msg_position(history, user_index):
-    """找到第 user_index 条 user 消息在 history 中的位置（1-based）"""
     count = 0
     for i, msg in enumerate(history):
         if msg.get('role') == 'user':
@@ -845,7 +958,6 @@ def find_user_msg_position(history, user_index):
 
 @app.route('/api/chat/edit', methods=['POST'])
 def chat_edit():
-    """编辑指定用户消息并重新生成其后的所有回复"""
     data = request.json
     sid = data.get('session_id', 'default')
     user_index = int(data.get('user_msg_index', 1))
@@ -863,8 +975,8 @@ def chat_edit():
     if idx < 0:
         return jsonify({"error": "消息未找到"}), 404
 
-    # 删除该用户消息及之后的所有消息
     del history[idx:]
+    sanitize_history(history)
 
     session_stop[sid] = False
     enabled_skills = get_session_skills(sid)
@@ -897,7 +1009,6 @@ def chat_edit():
 
 @app.route('/api/chat/regenerate', methods=['POST'])
 def chat_regenerate():
-    """从指定用户消息开始重新生成（保留该用户消息，删除其后的所有回复）"""
     data = request.json
     sid = data.get('session_id', 'default')
     user_index = int(data.get('user_msg_index', 1))
@@ -912,8 +1023,8 @@ def chat_regenerate():
     if idx < 0:
         return jsonify({"error": "消息未找到"}), 404
 
-    # 保留该 user 消息，删除之后的所有消息
     del history[idx + 1:]
+    sanitize_history(history)
 
     session_stop[sid] = False
     enabled_skills = get_session_skills(sid)
@@ -979,28 +1090,13 @@ if __name__ == '__main__':
     log("程序启动")
 
     try:
-        log("管理员权限: " + ("是" if is_admin() else "否"))
-        log("工作目录: " + WORKSPACE)
-        log("Skills 目录: " + SKILLS_DIR)
-        log("知识库目录: " + LEARN_DIR)
 
-        log("已加载 Skills: " + str(list(skill_manager.skills.keys())))
-
-        log("打开浏览器...")
         os.system("start http://127.0.0.1:5000/")
 
-        log("启动 Flask 服务...")
-        print("=" * 50)
-        print(" 管理员权限: " + ("是" if is_admin() else "否"))
-        print(" 工作目录: " + WORKSPACE)
-        print(" Skills 目录: " + SKILLS_DIR)
-        print(" 知识库目录: " + LEARN_DIR)
-        print(" 已加载 Skills: " + str(list(skill_manager.skills.keys())))
-        print(" 上下文限制: " + str(MAX_MESSAGES) + " 条消息 / " + str(MAX_TOTAL_TOKENS) + " tokens")
-        print("=" * 50)
+
         app.run(debug=False, host='0.0.0.0', port=5000, threaded=True)
 
-    except Exception as e:
+    except Exception as e: 
         import traceback
         err_msg = "[错误] 程序异常退出: " + str(e) + "\n" + traceback.format_exc()
         log(err_msg)

@@ -239,6 +239,7 @@
         .message.user .message-bubble {
             background: #6d5ef0;
             color: #fff;
+            white-space: pre-wrap;
         }
         .message.assistant {
             align-self: flex-start;
@@ -249,6 +250,7 @@
         .message.assistant .message-bubble {
             background: #f5f5f7;
             border: 1px solid #ececf0;
+            line-height: 1.85;
         }
         .message.assistant h1, .message.assistant h2, .message.assistant h3 {
             margin: 12px 0 8px;
@@ -347,34 +349,34 @@
         }
 
         .cmd-block {
-            background: #1a1a2e;
-            border-radius: 8px;
+            background: #f5f5f7;
+            border-radius: 4px;
             margin: 8px 0;
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             font-size: 13px;
-            border: 1px solid #2d2d44;
-            color: #e0e0e0;
+            border: 1px solid #d1d1d6;
+            color: #333;
             overflow: hidden;
         }
         .cmd-block-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: #2d2d44;
+            background: #e8e8ed;
             padding: 8px 14px;
             cursor: pointer;
             user-select: none;
         }
         .cmd-block-header:hover {
-            background: #363656;
+            background: #d1d1d6;
         }
         .cmd-block-header .cmd-title {
-            color: #7ee787;
+            color: #555;
             font-weight: 600;
             font-size: 12px;
         }
         .cmd-block-header .cmd-toggle {
-            color: #888;
+            color: #8e8e93;
             font-size: 11px;
             transition: transform 0.2s;
         }
@@ -395,13 +397,13 @@
             overflow: hidden;
         }
         .cmd-block .cmd-line {
-            color: #79c0ff;
+            color: #555;
             padding: 4px 0;
-            border-bottom: 1px solid #2d2d44;
+            border-bottom: 1px solid #d1d1d6;
             margin-bottom: 8px;
         }
         .cmd-block .cmd-output {
-            color: #c9d1d9;
+            color: #555;
             line-height: 1.6;
         }
 
@@ -409,16 +411,6 @@
             from { opacity: 0; transform: translateY(4px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .cursor-blink {
-            display: inline-block;
-            width: 2px;
-            height: 1.1em;
-            background: #6d5ef0;
-            animation: blink 0.9s step-end infinite;
-            vertical-align: text-bottom;
-            margin-left: 2px;
-        }
-        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
         .input-area {
             padding: 12px 24px 14px;
             border-top: 1px solid #e8e8ed;
@@ -762,11 +754,11 @@
             line-height: 1.6;
             max-height: 320px;
             overflow-y: auto;
-            overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
             border-top: 1px solid #e4defc;
             opacity: 1;
             transition: max-height 0.28s ease, padding 0.28s ease, opacity 0.22s ease, border-color 0.28s ease;
+            overscroll-behavior: contain;
         }
         .thinking-body.collapsed {
             max-height: 0;
@@ -880,8 +872,6 @@
         }
     </style>
 <base target="_blank">
-<base target="_blank">
-<base target="_blank">
 </head>
 <body>
 
@@ -968,7 +958,6 @@
         </div>
     </div>
 
-    <!-- 自定义弹窗 -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal-box">
             <div class="modal-title" id="modalTitle"></div>
@@ -979,11 +968,11 @@
             </div>
         </div>
     </div>
-    <!-- Toast 提示 -->
     <div class="toast" id="toast"></div>
 
     <script>
-        // ===== 自定义弹窗 & Toast =====
+        marked.setOptions({ breaks: true });
+
         const modalOverlay = document.getElementById('modalOverlay');
         const modalTitle = document.getElementById('modalTitle');
         const modalMessage = document.getElementById('modalMessage');
@@ -999,7 +988,6 @@
                 const confirmBtn = modalConfirmBtn;
                 const cancelBtn = modalCancelBtn;
 
-                // 按钮样式
                 confirmBtn.className = 'modal-btn ' + (options.danger ? 'danger' : 'primary');
                 confirmBtn.textContent = options.confirmText || '确认';
                 cancelBtn.textContent = options.cancelText || '取消';
@@ -1043,19 +1031,15 @@
         let lastUserMessage = '';
         let currentModel = 'flash';
         let deepThinkingEnabled = false;
-        let currentSegments = []; // [{type: 'thinking'|'interim'|'text', content: '...'}]
+        let currentSegments = [];
+        let renderedCache = [];
         let currentThinkingExpanded = false;
         let currentThinkingActive = false;
 
-        function pushSegment(type, content) {
-            if (currentSegments.length > 0 && currentSegments[currentSegments.length - 1].type === type) {
-                currentSegments[currentSegments.length - 1].content += content;
-            } else {
-                currentSegments.push({ type, content });
-            }
-        }
         let thinkingDotTimer = null;
         let thinkingDotText = '.';
+
+        let cmdBlockStates = {};
 
         const container = document.getElementById('messages');
         const input = document.getElementById('userInput');
@@ -1081,6 +1065,10 @@
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendOrStop();
+            }
+            if (e.key === 'Escape' && editingState) {
+                e.preventDefault();
+                cancelEdit();
             }
         });
 
@@ -1113,8 +1101,8 @@
             return div.innerHTML;
         }
 
-        let userMsgCounter = 0; // 用户消息计数器（1-based）
-        let currentBubbleDiv = null; // 当前 AI 消息的气泡 div
+        let userMsgCounter = 0;
+        let currentBubbleDiv = null;
 
         function addMessage(role, content, options) {
             const div = document.createElement('div');
@@ -1125,7 +1113,6 @@
             bubble.innerHTML = content;
             div.appendChild(bubble);
 
-            // 加操作按钮
             if (role === 'user') {
                 if (options && options.userIndex) {
                     div.dataset.userIndex = options.userIndex;
@@ -1147,12 +1134,10 @@
             }
 
             container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
             return div;
         }
 
         function findUserIndexFromAssistant(assistantDiv) {
-            // 找到该 AI 消息前面最近的 user 消息的 index
             let prev = assistantDiv.previousElementSibling;
             while (prev) {
                 if (prev.classList.contains('user')) {
@@ -1166,54 +1151,58 @@
         function editUserMessage(btn) {
             const msgDiv = btn.closest('.message.user');
             const userIndex = parseInt(msgDiv.dataset.userIndex, 10);
-            // 从 bubble 提取原始文本
             const bubble = msgDiv.querySelector('.message-bubble');
             const originalText = bubble ? bubble.textContent : '';
 
-            // 把文本填回输入框，进入编辑模式
             input.value = originalText;
             input.focus();
             input.style.height = 'auto';
             input.style.height = Math.min(input.scrollHeight, 150) + 'px';
 
-            // 标记当前是编辑模式
-            editingState = { userIndex: userIndex, msgDiv: msgDiv };
-            status.textContent = '[编辑] 修改后发送将替换此消息及之后的回复';
+            editingState = { userIndex: userIndex, msgDiv: msgDiv, originalText: originalText };
+            status.textContent = '[编辑] 修改后发送将替换此消息及之后的回复 · 按ESC取消';
             status.className = 'status loading';
+        }
+
+        function cancelEdit() {
+            if (!editingState) return;
+            input.value = '';
+            input.style.height = 'auto';
+            editingState = null;
+            status.textContent = '就绪';
+            status.className = 'status';
         }
 
         function retryUserMessage(btn) {
             const msgDiv = btn.closest('.message.user');
             const userIndex = parseInt(msgDiv.dataset.userIndex, 10);
-            startRegenerate(userIndex, msgDiv, true);
+            startRegenerate(userIndex, msgDiv, false);
         }
 
         function regenerateAssistant(btn) {
             const msgDiv = btn.closest('.message.assistant');
             const userIndex = findUserIndexFromAssistant(msgDiv);
             if (!userIndex) return;
-            startRegenerate(userIndex, msgDiv, false);
+            startRegenerate(userIndex, msgDiv, true);
         }
 
-        async function startRegenerate(userIndex, fromDiv, deleteUserMsg) {
+        async function startRegenerate(userIndex, fromDiv, deleteFromDiv) {
             if (isReplying) {
                 showToast('请等待当前回复完成');
                 return;
             }
 
-            // 删除该消息 div 及之后的所有 div
             let next = fromDiv.nextElementSibling;
             while (next) {
                 const nn = next.nextElementSibling;
                 next.remove();
                 next = nn;
             }
-            if (deleteUserMsg) {
-                fromDiv.remove();
-            } else {
-                // 重新生成时删除 AI 消息本身
+            if (deleteFromDiv) {
                 fromDiv.remove();
             }
+
+            cmdBlockStates = {};
 
             isReplying = true;
             sendBtn.disabled = false;
@@ -1226,11 +1215,11 @@
             currentMsgDiv.className = 'message assistant';
             currentBubbleDiv = document.createElement('div');
             currentBubbleDiv.className = 'message-bubble';
-            currentBubbleDiv.innerHTML = '<span class="cursor-blink"></span>';
+            currentBubbleDiv.innerHTML = '';
             currentMsgDiv.appendChild(currentBubbleDiv);
             container.appendChild(currentMsgDiv);
-            container.scrollTop = container.scrollHeight;
             currentSegments = [];
+            renderedCache = [];
             currentThinkingExpanded = false;
             currentThinkingActive = false;
             stopThinkingDots();
@@ -1266,7 +1255,7 @@
             }
         }
 
-        let editingState = null; // { userIndex, msgDiv }
+        let editingState = null;
 
         function addCodeFolding(html) {
             const temp = document.createElement('div');
@@ -1376,12 +1365,18 @@
                 }
             }
 
+            const id = toolName + '|' + (cmd || filePath || 'other');
+            const isExpanded = cmdBlockStates[id] === true;
+            const headerCollapsed = isExpanded ? '' : ' collapsed';
+            const bodyCollapsed = isExpanded ? '' : ' collapsed';
+            const toggleText = isExpanded ? '\u25BC' : '\u25B6';
+
             let html = '<div class="cmd-block">';
-            html += '<div class="cmd-block-header collapsed" onclick="toggleCmdBlock(this)">';
+            html += '<div class="cmd-block-header' + headerCollapsed + '" onmousedown="toggleCmdBlock(this); return false;" data-cmd-id="' + id + '">';
             html += '<span class="cmd-title">' + escapeHtml(toolName) + '</span>';
-            html += '<span class="cmd-toggle">&#9654;</span>';
+            html += '<span class="cmd-toggle">' + toggleText + '</span>';
             html += '</div>';
-            html += '<div class="cmd-block-body collapsed">';
+            html += '<div class="cmd-block-body' + bodyCollapsed + '">';
             if (cmd) {
                 html += '<div class="cmd-line">&#9654; ' + escapeHtml(cmd) + '</div>';
             } else if (filePath) {
@@ -1395,11 +1390,15 @@
         }
 
         function toggleCmdBlock(header) {
+            const id = header.getAttribute('data-cmd-id');
             header.classList.toggle('collapsed');
             const body = header.nextElementSibling;
             body.classList.toggle('collapsed');
             const toggle = header.querySelector('.cmd-toggle');
             toggle.textContent = header.classList.contains('collapsed') ? '\u25B6' : '\u25BC';
+            if (id) {
+                cmdBlockStates[id] = !header.classList.contains('collapsed');
+            }
         }
 
         function renderMessage(text) {
@@ -1416,9 +1415,15 @@
             return '<div class="thinking-block"><div class="thinking-header" onmousedown="toggleThinkingBlock(this); return false;"><span class="thinking-title">' + title + '</span><span class="thinking-toggle">' + toggleText + '</span></div><div class="thinking-body' + collapsedClass + '">' + renderMessage(text) + '</div></div>';
         }
 
+        function pushSegment(type, content) {
+            if (currentSegments.length > 0 && currentSegments[currentSegments.length - 1].type === type) {
+                currentSegments[currentSegments.length - 1].content += content;
+            } else {
+                currentSegments.push({ type, content });
+            }
+        }
+
         function renderCurrentMessage() {
-            // 按 segments 实际顺序渲染: thinking 进思考块, text 和 interim 按实际位置交错显示
-            // 这样工具调用会出现在它实际执行的位置（两次文字之间），而不是全部堆在一起
             let html = '';
             let thinkingBuffer = '';
             let hasThinking = false;
@@ -1431,17 +1436,28 @@
                 hasThinking = false;
             }
 
-            for (const seg of currentSegments) {
+            for (let i = 0; i < currentSegments.length; i++) {
+                const seg = currentSegments[i];
+                var isLast = (i === currentSegments.length - 1);
+
                 if (seg.type === 'thinking') {
                     hasThinking = true;
                     thinkingBuffer += seg.content;
+                } else if (seg.type === 'interim' && hasThinking) {
+                    thinkingBuffer += seg.content;
                 } else {
-                    flushThinking();
-                    // 跳过纯空白文本段，避免空消息
                     if (seg.type === 'text' && !seg.content.trim()) {
                         continue;
                     }
-                    html += renderMessage(seg.content);
+                    flushThinking();
+                    if (!isLast) {
+                        if (!renderedCache[i]) {
+                            renderedCache[i] = renderMessage(seg.content);
+                        }
+                        html += renderedCache[i];
+                    } else {
+                        html += renderMessage(seg.content);
+                    }
                 }
             }
             flushThinking();
@@ -1550,6 +1566,55 @@
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
+            let renderPending = false;
+            let thinkingPhase = true;
+            let thinkingTextBuffer = '';
+            let hasReceivedThinkingContent = false;
+
+            function scheduleRender() {
+                if (renderPending) return;
+                renderPending = true;
+                requestAnimationFrame(function() {
+                    renderPending = false;
+                    if (thinkingPhase) {
+                        const html = renderThinkingBlock(thinkingTextBuffer);
+                        const oldBody = currentBubbleDiv.querySelector('.thinking-body:not(.collapsed)');
+                        let wasAtBottom = false;
+                        if (oldBody) {
+                            const scrollHeight = oldBody.scrollHeight;
+                            const scrollTop = oldBody.scrollTop;
+                            const clientHeight = oldBody.clientHeight;
+                            wasAtBottom = (scrollHeight - scrollTop - clientHeight) < 20;
+                        }
+                        currentBubbleDiv.innerHTML = html;
+                        const newBody = currentBubbleDiv.querySelector('.thinking-body:not(.collapsed)');
+                        if (newBody) {
+                            if (wasAtBottom) {
+                                newBody.scrollTop = newBody.scrollHeight;
+                            }
+                        }
+                    } else {
+                        const oldBody = currentBubbleDiv.querySelector('.thinking-body:not(.collapsed)');
+                        let scrollTop = 0;
+                        let isAtBottom = true;
+                        if (oldBody) {
+                            scrollTop = oldBody.scrollTop;
+                            const scrollHeight = oldBody.scrollHeight;
+                            const clientHeight = oldBody.clientHeight;
+                            isAtBottom = (scrollHeight - scrollTop - clientHeight) < 20;
+                        }
+                        currentBubbleDiv.innerHTML = renderCurrentMessage();
+                        const newBody = currentBubbleDiv.querySelector('.thinking-body:not(.collapsed)');
+                        if (newBody) {
+                            if (isAtBottom) {
+                                newBody.scrollTop = newBody.scrollHeight;
+                            } else {
+                                newBody.scrollTop = scrollTop;
+                            }
+                        }
+                    }
+                });
+            }
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -1565,31 +1630,59 @@
                         const data = JSON.parse(line);
                         if (data.type === 'heartbeat') continue;
 
-                        if (data.type === 'text') {
-                            if (currentThinkingActive) {
-                                currentThinkingActive = false;
-                                stopThinkingDots();
+                        if (data.type === 'thinking') {
+                            hasReceivedThinkingContent = true;
+                            if (thinkingPhase) {
+                                thinkingTextBuffer += data.content;
+                                if (!currentThinkingActive) {
+                                    currentThinkingActive = true;
+                                    startThinkingDots();
+                                }
+                                scheduleRender();
                             }
-                            pushSegment('text', data.content);
-                            currentBubbleDiv.innerHTML = renderCurrentMessage() + '<span class="cursor-blink"></span>';
-                            container.scrollTop = container.scrollHeight;
-                        } else if (data.type === 'thinking') {
-                            pushSegment('thinking', data.content);
-                            currentThinkingActive = true;
-                            startThinkingDots();
-                            currentBubbleDiv.innerHTML = renderCurrentMessage() + '<span class="cursor-blink"></span>';
-                            container.scrollTop = container.scrollHeight;
                         } else if (data.type === 'interim') {
-                            // 深度思考模式下：思考还在进行时，工具调用进思考块内显示
-                            // 思考已结束后，工具调用保持在外面显示
-                            if (currentThinkingActive) {
-                                pushSegment('thinking', '\n' + data.content);
+                            if (thinkingPhase) {
+                                if (!hasReceivedThinkingContent) {
+                                    thinkingPhase = false;
+                                    stopThinkingDots();
+                                    currentThinkingActive = false;
+                                    pushSegment('interim', data.content);
+                                    scheduleRender();
+                                } else {
+                                    if (thinkingTextBuffer) {
+                                        pushSegment('thinking_block', thinkingTextBuffer);
+                                    }
+                                    thinkingPhase = false;
+                                    thinkingTextBuffer = '';
+                                    stopThinkingDots();
+                                    currentThinkingActive = false;
+                                    pushSegment('interim', data.content);
+                                    scheduleRender();
+                                }
                             } else {
                                 pushSegment('interim', data.content);
+                                scheduleRender();
                             }
-                            currentBubbleDiv.innerHTML = renderCurrentMessage() + '<span class="cursor-blink"></span>';
-                            container.scrollTop = container.scrollHeight;
+                        } else if (data.type === 'text') {
+                            if (thinkingPhase) {
+                                if (thinkingTextBuffer) {
+                                    pushSegment('thinking_block', thinkingTextBuffer);
+                                }
+                                thinkingPhase = false;
+                                thinkingTextBuffer = '';
+                                stopThinkingDots();
+                                currentThinkingActive = false;
+                            }
+                            pushSegment('text', data.content);
+                            scheduleRender();
                         } else if (data.type === 'done') {
+                            if (thinkingPhase && thinkingTextBuffer) {
+                                pushSegment('thinking_block', thinkingTextBuffer);
+                                thinkingPhase = false;
+                                thinkingTextBuffer = '';
+                                stopThinkingDots();
+                                currentThinkingActive = false;
+                            }
                             finishMessage(true);
                             return;
                         }
@@ -1600,13 +1693,28 @@
             }
         }
 
+        function renderCurrentMessage() {
+            let html = '';
+            for (let i = 0; i < currentSegments.length; i++) {
+                const seg = currentSegments[i];
+                if (seg.type === 'thinking_block') {
+                    html += renderThinkingBlock(seg.content);
+                } else if (seg.type === 'text') {
+                    if (!seg.content.trim()) continue;
+                    html += renderMessage(seg.content);
+                } else if (seg.type === 'interim') {
+                    html += renderMessage(seg.content);
+                }
+            }
+            return html;
+        }
+
         async function sendMessage(isRetry) {
             if (isReplying && !isRetry) return;
 
             const text = isRetry ? lastUserMessage : input.value.trim();
             if (!text) return;
 
-            // 检测是否是编辑模式
             const isEditing = !!editingState && !isRetry;
 
             if (!isRetry && !isEditing) lastUserMessage = text;
@@ -1615,6 +1723,8 @@
                 input.style.height = 'auto';
             }
 
+            cmdBlockStates = {};
+
             const welcome = container.querySelector('.welcome-msg');
             if (welcome) welcome.remove();
 
@@ -1622,7 +1732,6 @@
             let payload = { message: text, session_id: sessionId, deep_thinking: deepThinkingEnabled, model: currentModel };
 
             if (isEditing) {
-                // 编辑模式: 删除原消息及之后的 div, 复用原 userIndex
                 const oldDiv = editingState.msgDiv;
                 const oldUserIndex = editingState.userIndex;
                 let next = oldDiv.nextElementSibling;
@@ -1633,7 +1742,6 @@
                 }
                 oldDiv.remove();
 
-                // 用新内容重新加 user 消息, 但保留原 userIndex
                 addMessage('user', escapeHtml(text), { userIndex: oldUserIndex });
 
                 url = '/api/chat/edit';
@@ -1660,11 +1768,11 @@
             currentMsgDiv.className = 'message assistant';
             currentBubbleDiv = document.createElement('div');
             currentBubbleDiv.className = 'message-bubble';
-            currentBubbleDiv.innerHTML = '<span class="cursor-blink"></span>';
+            currentBubbleDiv.innerHTML = '';
             currentMsgDiv.appendChild(currentBubbleDiv);
             container.appendChild(currentMsgDiv);
-            container.scrollTop = container.scrollHeight;
             currentSegments = [];
+            renderedCache = [];
             currentThinkingExpanded = false;
             currentThinkingActive = false;
             stopThinkingDots();
@@ -1702,9 +1810,6 @@
         }
 
         function finishMessage(success, isError) {
-            const cursor = currentMsgDiv.querySelector('.cursor-blink');
-            if (cursor) cursor.remove();
-
             currentThinkingActive = false;
             stopThinkingDots();
             currentBubbleDiv.innerHTML = renderCurrentMessage();
