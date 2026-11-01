@@ -1,8 +1,8 @@
-# deepseek Agent  
+# DeepSeek Agent  
 
 
 ## 项目说明
-模拟[OpenClaw](https://github.com/openclaw/openclaw)的部分功能，目前完成度为**86%**，支持**Skill**功能  
+模拟[OpenClaw](https://github.com/openclaw/openclaw)的部分功能，目前完成度为**90%**，支持**Skill**功能  
 部署到**Windows**上后，通过配置**Skill**实现一些操作，具体Skill编写方法请见下方  
 ------
 
@@ -13,6 +13,17 @@
 # 更新日志  
 
 ## 更新内容:  
+
+## 2.0.0更新  
+本次是大版本更新，内容较多:  
+1.从网页版改为了webwiew，只有一个窗口  
+2.api等配置改为agent内配置  
+3.加入了历史对话  
+4.修复了一些bug  
+5.优化了一些屎山代码  
+
+
+
 ## beta_2.0_4更新  
 1.更新ui界面  
 2.修复孤儿tool消息  
@@ -110,7 +121,7 @@
   3.充值您的apikey  
 
   
-  4.将您的**密钥**填写到代码中  
+  4.将您的**密钥**填写到代码中(旧版本)或app内右下角模型切换的设置内  
 
 ## Skill开发  
 
