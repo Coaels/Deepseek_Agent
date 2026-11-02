@@ -10,9 +10,20 @@
 本项目仅有**一人**配合ai完成代码开发，已发布正式版，欢迎反馈bug  
 
 ------  
+# 用前必看！！！:  
+打开前务必安装.net运行时！！！  
+https://dotnet.microsoft.com/zh-cn/download/dotnet/thank-you/runtime-desktop-6.0.36-windows-x64-installer  
+
+
+
 # 更新日志  
 
 ## 更新内容:  
+## 2.1.0更新  
+修复了多个bug  
+
+
+
 
 ## 2.0.0更新  
 本次是大版本更新，内容较多:  
